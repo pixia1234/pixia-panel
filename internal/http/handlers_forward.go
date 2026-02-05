@@ -559,9 +559,15 @@ func (s *Server) enqueueForwardGostCtx(ctx context.Context, fw *store.Forward, t
 			remote = gost.UpdateRemoteServiceData(name, *fw.OutPort, fw.RemoteAddr, tunnel.Protocol, fw.Strategy, fw.InterfaceName, limiter)
 		}
 		_ = s.enqueueGostCtx(ctx, tunnel.OutNodeID, action, remote)
-		chains := gost.AddChainsData(name, tunnel.OutIP+":"+strconv.FormatInt(*fw.OutPort, 10), tunnel.Protocol, fw.InterfaceName)
+		outIP := tunnel.OutIP
+		if outIP == "" {
+			if outNode, err := s.store.GetNodeByID(ctx, tunnel.OutNodeID); err == nil {
+				outIP = pickNodeEntryIP(derefString(outNode.IP), outNode.ServerIP)
+			}
+		}
+		chains := gost.AddChainsData(name, outIP+":"+strconv.FormatInt(*fw.OutPort, 10), tunnel.Protocol, fw.InterfaceName)
 		if action == "UpdateService" {
-			chains = gost.UpdateChainsData(name, tunnel.OutIP+":"+strconv.FormatInt(*fw.OutPort, 10), tunnel.Protocol, fw.InterfaceName)
+			chains = gost.UpdateChainsData(name, outIP+":"+strconv.FormatInt(*fw.OutPort, 10), tunnel.Protocol, fw.InterfaceName)
 		}
 		_ = s.enqueueGostCtx(ctx, tunnel.InNodeID, map[string]string{"AddService": "AddChains", "UpdateService": "UpdateChains"}[action], chains)
 	}

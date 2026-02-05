@@ -129,7 +129,7 @@ func (s *Server) handleNodeUpdate(w http.ResponseWriter, r *http.Request) {
 	}
 
 	_ = s.store.UpdateTunnelsInIP(r.Context(), node.ID, req.IP)
-	_ = s.store.UpdateTunnelsOutIP(r.Context(), node.ID, req.ServerIP)
+	_ = s.store.UpdateTunnelsOutIP(r.Context(), node.ID, pickNodeEntryIP(req.IP, req.ServerIP))
 
 	// notify node if online
 	if node.Status == 1 {

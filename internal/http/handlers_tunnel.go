@@ -120,6 +120,7 @@ func (s *Server) handleTunnelCreate(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusBadRequest, Err("出口节点不存在"))
 		return
 	}
+	outIP := pickNodeEntryIP(derefString(outNode.IP), outNode.ServerIP)
 
 	tunnel := &store.Tunnel{
 		Name:          req.Name,
@@ -127,7 +128,7 @@ func (s *Server) handleTunnelCreate(w http.ResponseWriter, r *http.Request) {
 		InNodeID:      req.InNodeID,
 		InIP:          derefString(inNode.IP),
 		OutNodeID:     outNodeID,
-		OutIP:         outNode.ServerIP,
+		OutIP:         outIP,
 		Type:          req.Type,
 		Protocol:      defaultString(req.Protocol, "tls"),
 		Flow:          req.Flow,
@@ -216,7 +217,7 @@ func (s *Server) handleTunnelUpdate(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		tunnel.OutNodeID = *req.OutNodeID
-		tunnel.OutIP = outNode.ServerIP
+		tunnel.OutIP = pickNodeEntryIP(derefString(outNode.IP), outNode.ServerIP)
 	}
 	tunnel.Flow = req.Flow
 	tunnel.TrafficRatio = req.TrafficRatio
@@ -246,7 +247,13 @@ func (s *Server) handleTunnelUpdate(w http.ResponseWriter, r *http.Request) {
 			s.ensureLimiterConfig(r.Context(), tunnel.OutNodeID, limiter)
 			remote := gost.UpdateRemoteServiceData(name, *fw.OutPort, fw.RemoteAddr, tunnel.Protocol, fw.Strategy, fw.InterfaceName, limiter)
 			_ = s.enqueueGost(r, tunnel.OutNodeID, "UpdateService", remote)
-			chains := gost.UpdateChainsData(name, tunnel.OutIP+":"+strconv.FormatInt(*fw.OutPort, 10), tunnel.Protocol, fw.InterfaceName)
+			outIP := tunnel.OutIP
+			if outIP == "" {
+				if outNode, err := s.store.GetNodeByID(r.Context(), tunnel.OutNodeID); err == nil {
+					outIP = pickNodeEntryIP(derefString(outNode.IP), outNode.ServerIP)
+				}
+			}
+			chains := gost.UpdateChainsData(name, outIP+":"+strconv.FormatInt(*fw.OutPort, 10), tunnel.Protocol, fw.InterfaceName)
 			_ = s.enqueueGost(r, tunnel.InNodeID, "UpdateChains", chains)
 		}
 	}
@@ -453,7 +460,11 @@ func (s *Server) handleTunnelDiagnose(w http.ResponseWriter, r *http.Request) {
 				break
 			}
 		}
-		results = append(results, s.tcpPing(r.Context(), inNode, outNode.ServerIP, int(outPort), "入口->出口"))
+		targetIP := tunnel.OutIP
+		if targetIP == "" {
+			targetIP = pickNodeEntryIP(derefString(outNode.IP), outNode.ServerIP)
+		}
+		results = append(results, s.tcpPing(r.Context(), inNode, targetIP, int(outPort), "入口->出口"))
 		results = append(results, s.tcpPing(r.Context(), outNode, "www.google.com", 443, "出口->外网"))
 	}
 
