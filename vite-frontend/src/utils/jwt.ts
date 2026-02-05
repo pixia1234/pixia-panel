@@ -3,7 +3,8 @@
  */
 
 interface JWTPayload {
-  sub: string;
+  sub?: string;
+  user_id?: number | string;
   role_id: number;
   user: string;
   exp: number;
@@ -37,7 +38,10 @@ function getPayloadFromToken(token: string): JWTPayload | null {
  */
 export function getUserIdFromToken(token: string): number | null {
   const payload = getPayloadFromToken(token);
-  return payload ? parseInt(payload.sub) : null;
+  if (!payload) return null;
+  const raw = payload.user_id ?? payload.sub;
+  const num = typeof raw === 'number' ? raw : parseInt(String(raw), 10);
+  return Number.isFinite(num) ? num : null;
 }
 
 /**
