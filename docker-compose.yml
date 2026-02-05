@@ -1,0 +1,50 @@
+services:
+  backend:
+    image: ${PIXIA_BACKEND_IMAGE:-pixia1234/pixia-panel-backend:latest}
+    container_name: pixia-backend
+    restart: unless-stopped
+    environment:
+      PIXIA_DB_PATH: /data/pixia.db
+      PIXIA_HTTP_ADDR: :6365
+      PIXIA_WS_PATH: /system-info
+      PIXIA_JWT_SECRET: ${JWT_SECRET:-pixia-secret}
+      TZ: Asia/Shanghai
+    volumes:
+      - pixia_data:/data
+    ports:
+      - "${BACKEND_PORT:-6365}:6365"
+    networks:
+      - pixia-network
+    healthcheck:
+      test: ["CMD", "sh", "-c", "curl -fsS http://localhost:6365/flow/test || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 20s
+
+  frontend:
+    image: ${PIXIA_FRONTEND_IMAGE:-pixia1234/pixia-panel-frontend:latest}
+    container_name: pixia-frontend
+    restart: unless-stopped
+    ports:
+      - "${FRONTEND_PORT:-6366}:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks:
+      - pixia-network
+
+volumes:
+  pixia_data:
+    name: pixia_data
+    driver: local
+
+networks:
+  pixia-network:
+    name: pixia-network
+    driver: bridge
+    enable_ipv6: true
+    ipam:
+      config:
+        - subnet: 172.30.0.0/16
+        - subnet: fd00:1234:5678::/48
