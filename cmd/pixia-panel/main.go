@@ -12,7 +12,6 @@ import (
 
 	"github.com/robfig/cron/v3"
 
-	"pixia-panel/internal/captcha"
 	"pixia-panel/internal/db"
 	"pixia-panel/internal/flow"
 	"pixia-panel/internal/gost"
@@ -31,7 +30,6 @@ func main() {
 	retryDelay := getenvDurationDefault("PIXIA_OUTBOX_RETRY_DELAY", 5*time.Second)
 	jwtSecret := []byte(getenvDefault("PIXIA_JWT_SECRET", "pixia-secret"))
 	jwtTTL := getenvDurationDefault("PIXIA_JWT_TTL", 24*time.Hour)
-	captchaTTL := getenvDurationDefault("PIXIA_CAPTCHA_TTL", 2*time.Minute)
 
 	conn, err := db.Open(dbPath)
 	if err != nil {
@@ -47,9 +45,8 @@ func main() {
 	flowService := flow.New(store)
 	hub := gost.NewHub()
 	hub.SetJWTSecret(jwtSecret)
-	captchaService := captcha.New(captchaTTL)
 
-	server := httpapi.NewServer(store, flowService, hub, captchaService, jwtSecret, jwtTTL)
+	server := httpapi.NewServer(store, flowService, hub, jwtSecret, jwtTTL)
 	router := http.NewServeMux()
 	server.Register(router)
 	router.Handle(wsPath, hub.ServeWS(store))

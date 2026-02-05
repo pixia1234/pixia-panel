@@ -4,6 +4,7 @@ import (
 	"crypto/md5"
 	"encoding/hex"
 	"net/http"
+	"strings"
 	"time"
 
 	"pixia-panel/internal/auth"
@@ -69,25 +70,18 @@ func (s *Server) handleUserLogin(w http.ResponseWriter, r *http.Request) {
 
 	if s.isCaptchaEnabled(r) {
 		turnstileEnabled, turnstileSecret := s.turnstileConfig(r)
-		if turnstileEnabled {
-			if req.TurnstileToken == "" {
-				writeJSON(w, http.StatusBadRequest, Err("验证码不能为空"))
-				return
-			}
-			resp, err := captcha.VerifyTurnstile(r.Context(), turnstileSecret, req.TurnstileToken, r.RemoteAddr)
-			if err != nil || !resp.Success {
-				writeJSON(w, http.StatusBadRequest, Err("验证码校验失败"))
-				return
-			}
-		} else {
-			if req.CaptchaID == "" {
-				writeJSON(w, http.StatusBadRequest, Err("验证码不能为空"))
-				return
-			}
-			if !s.captcha.ConsumeToken(req.CaptchaID) {
-				writeJSON(w, http.StatusBadRequest, Err("验证码校验失败"))
-				return
-			}
+		if !turnstileEnabled {
+			writeJSON(w, http.StatusBadRequest, Err("请先配置Cloudflare验证码"))
+			return
+		}
+		if req.TurnstileToken == "" {
+			writeJSON(w, http.StatusBadRequest, Err("验证码不能为空"))
+			return
+		}
+		resp, err := captcha.VerifyTurnstile(r.Context(), turnstileSecret, req.TurnstileToken, r.RemoteAddr)
+		if err != nil || !resp.Success {
+			writeJSON(w, http.StatusBadRequest, Err("验证码校验失败"))
+			return
 		}
 	}
 
@@ -342,6 +336,11 @@ func (s *Server) turnstileConfig(r *http.Request) (bool, string) {
 	enabled := false
 	if cfg, err := s.store.GetConfigByName(r.Context(), "turnstile_enabled"); err == nil {
 		enabled = cfg.Value == "true"
+	}
+	if cfg, err := s.store.GetConfigByName(r.Context(), "captcha_type"); err == nil {
+		if strings.EqualFold(cfg.Value, "TURNSTILE") {
+			enabled = true
+		}
 	}
 	if !enabled {
 		return false, ""

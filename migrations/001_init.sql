@@ -125,11 +125,11 @@ CREATE TABLE IF NOT EXISTS vite_config (
   time INTEGER NOT NULL
 );
 
-INSERT OR IGNORE INTO vite_config (id, name, value, time) VALUES (1, 'app_name', 'flux', 1755147963000);
+INSERT OR IGNORE INTO vite_config (id, name, value, time) VALUES (1, 'app_name', 'pixia-panel', 1755147963000);
 INSERT OR IGNORE INTO vite_config (id, name, value, time) VALUES (2, 'captcha_enabled', 'false', 1755147963000);
-INSERT OR IGNORE INTO vite_config (id, name, value, time) VALUES (3, 'captcha_type', 'RANDOM', 1755147963000);
+INSERT OR IGNORE INTO vite_config (id, name, value, time) VALUES (3, 'captcha_type', 'TURNSTILE', 1755147963000);
 INSERT OR IGNORE INTO vite_config (id, name, value, time) VALUES (4, 'ip', '', 1755147963000);
-INSERT OR IGNORE INTO vite_config (id, name, value, time) VALUES (5, 'turnstile_enabled', 'false', 1755147963000);
+INSERT OR IGNORE INTO vite_config (id, name, value, time) VALUES (5, 'turnstile_enabled', 'true', 1755147963000);
 INSERT OR IGNORE INTO vite_config (id, name, value, time) VALUES (6, 'turnstile_site_key', '', 1755147963000);
 INSERT OR IGNORE INTO vite_config (id, name, value, time) VALUES (7, 'turnstile_secret_key', '', 1755147963000);
 

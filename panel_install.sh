@@ -4,7 +4,7 @@ set -e
 export LANG=en_US.UTF-8
 export LC_ALL=C
 
-PANEL_VERSION="0.2.0"
+PANEL_VERSION="0.2.2"
 REPO="pixia1234/pixia-panel"
 BASE_URL="https://github.com/${REPO}/releases/download/${PANEL_VERSION}"
 DOCKER_COMPOSEV4_URL="${BASE_URL}/docker-compose-v4.yml"

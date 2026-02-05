@@ -21,64 +21,11 @@ func (s *Server) handleCaptchaCheck(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleCaptchaGenerate(w http.ResponseWriter, r *http.Request) {
-	challenge := s.captcha.Generate()
-	resp := map[string]any{
-		"code": 200,
-		"msg":  "success",
-		"id":   challenge.ID,
-		"captcha": map[string]any{
-			"type":                  challenge.Type,
-			"backgroundImage":       challenge.BackgroundImage,
-			"templateImage":         challenge.TemplateImage,
-			"backgroundImageHeight": challenge.BackgroundImageHeight,
-			"data":                  challenge.Data,
-		},
-		"data": map[string]any{
-			"id": challenge.ID,
-			"captcha": map[string]any{
-				"type":                  challenge.Type,
-				"backgroundImage":       challenge.BackgroundImage,
-				"templateImage":         challenge.TemplateImage,
-				"backgroundImageHeight": challenge.BackgroundImageHeight,
-				"data":                  challenge.Data,
-			},
-		},
-	}
-	w.Header().Set("Content-Type", "application/json")
-	_ = json.NewEncoder(w).Encode(resp)
+	writeJSON(w, http.StatusBadRequest, Err("仅支持Cloudflare验证码"))
 }
 
 func (s *Server) handleCaptchaVerify(w http.ResponseWriter, r *http.Request) {
-	var req captchaVerifyRequest
-	if err := decodeJSON(r, &req); err != nil {
-		writeCaptchaVerify(w, false, "")
-		return
-	}
-
-	id := req.ID
-	if id == "" {
-		id = req.CaptchaID
-	}
-	trackData := req.Data
-	if len(trackData) == 0 {
-		trackData = req.TrackData
-	}
-	if len(trackData) > 0 && trackData[0] == '"' {
-		var s string
-		if err := json.Unmarshal(trackData, &s); err == nil {
-			trackData = []byte(s)
-		}
-	}
-
-	if id == "" || len(trackData) == 0 {
-		writeCaptchaVerify(w, false, "")
-		return
-	}
-	if s.captcha.VerifyTrack(id, trackData) {
-		writeCaptchaVerify(w, true, id)
-		return
-	}
-	writeCaptchaVerify(w, false, "")
+	writeJSON(w, http.StatusBadRequest, Err("仅支持Cloudflare验证码"))
 }
 
 func writeCaptchaVerify(w http.ResponseWriter, ok bool, token string) {

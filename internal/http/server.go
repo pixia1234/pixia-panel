@@ -4,7 +4,6 @@ import (
 	"net/http"
 	"time"
 
-	"pixia-panel/internal/captcha"
 	"pixia-panel/internal/flow"
 	"pixia-panel/internal/gost"
 	"pixia-panel/internal/store"
@@ -14,13 +13,12 @@ type Server struct {
 	store     *store.Store
 	flow      *flow.Service
 	hub       *gost.Hub
-	captcha   *captcha.Service
 	jwtSecret []byte
 	tokenTTL  time.Duration
 }
 
-func NewServer(store *store.Store, flow *flow.Service, hub *gost.Hub, captcha *captcha.Service, jwtSecret []byte, tokenTTL time.Duration) *Server {
-	return &Server{store: store, flow: flow, hub: hub, captcha: captcha, jwtSecret: jwtSecret, tokenTTL: tokenTTL}
+func NewServer(store *store.Store, flow *flow.Service, hub *gost.Hub, jwtSecret []byte, tokenTTL time.Duration) *Server {
+	return &Server{store: store, flow: flow, hub: hub, jwtSecret: jwtSecret, tokenTTL: tokenTTL}
 }
 
 func (s *Server) Register(mux *http.ServeMux) {

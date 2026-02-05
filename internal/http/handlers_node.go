@@ -17,6 +17,9 @@ type nodeCreateRequest struct {
 	ServerIP string `json:"serverIp"`
 	PortSta  int64  `json:"portSta"`
 	PortEnd  int64  `json:"portEnd"`
+	HTTP     *int64 `json:"http"`
+	TLS      *int64 `json:"tls"`
+	Socks    *int64 `json:"socks"`
 }
 
 type nodeUpdateRequest struct {
@@ -50,6 +53,18 @@ func (s *Server) handleNodeCreate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	secret := randomHex(16)
+	httpVal := int64(0)
+	tlsVal := int64(0)
+	socksVal := int64(0)
+	if req.HTTP != nil {
+		httpVal = *req.HTTP
+	}
+	if req.TLS != nil {
+		tlsVal = *req.TLS
+	}
+	if req.Socks != nil {
+		socksVal = *req.Socks
+	}
 	node := &store.Node{
 		Name:        req.Name,
 		Secret:      secret,
@@ -57,9 +72,9 @@ func (s *Server) handleNodeCreate(w http.ResponseWriter, r *http.Request) {
 		ServerIP:    req.ServerIP,
 		PortSta:     req.PortSta,
 		PortEnd:     req.PortEnd,
-		HTTP:        0,
-		TLS:         0,
-		Socks:       0,
+		HTTP:        httpVal,
+		TLS:         tlsVal,
+		Socks:       socksVal,
 		CreatedTime: time.Now().UnixMilli(),
 		Status:      0,
 	}
@@ -170,7 +185,7 @@ func (s *Server) handleNodeInstall(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	addr := formatServerAddr(cfg.Value)
-	cmd := "curl -L https://github.com/bqlpfy/flux-panel/releases/download/1.4.3/install.sh -o ./install.sh && chmod +x ./install.sh && ./install.sh -a " + addr + " -s " + node.Secret
+	cmd := "curl -fsSL https://raw.githubusercontent.com/pixia1234/pixia-panel/main/node_install.sh -o ./node_install.sh && chmod +x ./node_install.sh && ./node_install.sh -a " + addr + " -s " + node.Secret
 	writeJSON(w, http.StatusOK, OK(cmd))
 }
 

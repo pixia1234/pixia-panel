@@ -67,45 +67,17 @@ const CONFIG_ITEMS: ConfigItem[] = [
   {
     key: 'captcha_type',
     label: '验证码类型',
-    description: '选择验证码的显示类型，不同类型有不同的安全级别',
+    description: '当前仅支持 Cloudflare Turnstile',
     type: 'select',
     dependsOn: 'captcha_enabled',
     dependsValue: 'true',
     options: [
-      { 
-        label: '随机类型', 
-        value: 'RANDOM', 
-        description: '系统随机选择验证码类型' 
-      },
-      { 
-        label: '滑块验证码', 
-        value: 'SLIDER', 
-        description: '拖动滑块完成拼图验证' 
-      },
-      { 
-        label: '文字点选验证码', 
-        value: 'WORD_IMAGE_CLICK', 
-        description: '按顺序点击指定文字' 
-      },
-      { 
-        label: '旋转验证码', 
-        value: 'ROTATE', 
-        description: '旋转图片到正确角度' 
-      },
-      { 
-        label: '拼图验证码', 
-        value: 'CONCAT', 
-        description: '拖动滑块完成图片拼接' 
+      {
+        label: 'Cloudflare Turnstile',
+        value: 'TURNSTILE',
+        description: '使用 Cloudflare 交互式验证码'
       }
     ]
-  },
-  {
-    key: 'turnstile_enabled',
-    label: '启用 Cloudflare 验证码',
-    description: '开启后使用 Cloudflare Turnstile 交互式验证码',
-    type: 'switch',
-    dependsOn: 'captcha_enabled',
-    dependsValue: 'true',
   },
   {
     key: 'turnstile_site_key',
@@ -113,8 +85,8 @@ const CONFIG_ITEMS: ConfigItem[] = [
     placeholder: '请输入 Cloudflare Site Key',
     description: 'Cloudflare Turnstile 站点密钥',
     type: 'input',
-    dependsOn: 'turnstile_enabled',
-    dependsValue: 'true',
+    dependsOn: 'captcha_type',
+    dependsValue: 'TURNSTILE',
   },
   {
     key: 'turnstile_secret_key',
@@ -122,8 +94,8 @@ const CONFIG_ITEMS: ConfigItem[] = [
     placeholder: '请输入 Cloudflare Secret Key',
     description: 'Cloudflare Turnstile 服务端密钥',
     type: 'input',
-    dependsOn: 'turnstile_enabled',
-    dependsValue: 'true',
+    dependsOn: 'captcha_type',
+    dependsValue: 'TURNSTILE',
   }
 ];
 
@@ -209,11 +181,18 @@ export default function ConfigPage() {
   const handleConfigChange = (key: string, value: string) => {
     let newConfigs = { ...configs, [key]: value };
     
-    // 特殊处理：启用验证码时，如果验证码类型未设置，默认为随机
+    // 特殊处理：启用验证码时，如果验证码类型未设置，默认启用 Turnstile
     if (key === 'captcha_enabled' && value === 'true') {
       if (!newConfigs.captcha_type) {
-        newConfigs.captcha_type = 'RANDOM';
+        newConfigs.captcha_type = 'TURNSTILE';
       }
+    }
+    if (key === 'captcha_enabled' && value !== 'true') {
+      newConfigs.captcha_type = '';
+      newConfigs.turnstile_enabled = 'false';
+    }
+    if (key === 'captcha_type') {
+      newConfigs.turnstile_enabled = value === 'TURNSTILE' ? 'true' : 'false';
     }
     
     setConfigs(newConfigs);
