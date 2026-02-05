@@ -1,0 +1,7 @@
+.git
+.gitignore
+node_modules
+vite-frontend/node_modules
+vite-frontend/dist
+test-run
+*.db

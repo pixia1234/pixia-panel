@@ -1,0 +1,20 @@
+.env
+.env.*
+
+# build outputs
+/bin/
+/dist/
+/node_modules/
+/vite-frontend/node_modules/
+/vite-frontend/dist/
+
+# local/test data
+/test-run/
+*.db
+*.db-shm
+*.db-wal
+
+# editor
+.DS_Store
+.idea/
+.vscode/
