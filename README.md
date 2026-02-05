@@ -20,18 +20,6 @@ curl -L https://raw.githubusercontent.com/pixia1234/pixia-panel/refs/heads/main/
 curl -L https://raw.githubusercontent.com/pixia1234/pixia-panel/refs/heads/main/node_install.sh -o node_install.sh && chmod +x node_install.sh && ./node_install.sh
 ```
 
-面板端（开发版）：
-
-```
-curl -L https://raw.githubusercontent.com/pixia1234/pixia-panel/refs/heads/beta/panel_install.sh -o panel_install.sh && chmod +x panel_install.sh && ./panel_install.sh
-```
-
-节点端（开发版）：
-
-```
-curl -L https://raw.githubusercontent.com/pixia1234/pixia-panel/refs/heads/beta/node_install.sh -o node_install.sh && chmod +x node_install.sh && ./node_install.sh
-```
-
 ## 默认管理员账号
 
 账号: admin_user  
@@ -49,7 +37,7 @@ bash panel_install.sh
 
 ```
 curl -fsSL https://raw.githubusercontent.com/pixia1234/pixia-panel/main/node_install.sh -o node_install.sh
-bash node_install.sh -a 面板IP:6365 -s 节点密钥
+bash node_install.sh -a 面板IP:端口 -s 节点密钥
 ```
 
 ## 构建节点 gost（发布用）
