@@ -248,10 +248,8 @@ func (s *Server) handleTunnelUpdate(w http.ResponseWriter, r *http.Request) {
 			remote := gost.UpdateRemoteServiceData(name, *fw.OutPort, fw.RemoteAddr, tunnel.Protocol, fw.Strategy, fw.InterfaceName, limiter)
 			_ = s.enqueueGost(r, tunnel.OutNodeID, "UpdateService", remote)
 			outIP := tunnel.OutIP
-			if outIP == "" {
-				if outNode, err := s.store.GetNodeByID(r.Context(), tunnel.OutNodeID); err == nil {
-					outIP = pickNodeEntryIP(derefString(outNode.IP), outNode.ServerIP)
-				}
+			if outNode, err := s.store.GetNodeByID(r.Context(), tunnel.OutNodeID); err == nil {
+				outIP = pickNodeEntryIP(derefString(outNode.IP), outNode.ServerIP)
 			}
 			chains := gost.UpdateChainsData(name, outIP+":"+strconv.FormatInt(*fw.OutPort, 10), tunnel.Protocol, fw.InterfaceName)
 			_ = s.enqueueGost(r, tunnel.InNodeID, "UpdateChains", chains)
@@ -460,10 +458,7 @@ func (s *Server) handleTunnelDiagnose(w http.ResponseWriter, r *http.Request) {
 				break
 			}
 		}
-		targetIP := tunnel.OutIP
-		if targetIP == "" {
-			targetIP = pickNodeEntryIP(derefString(outNode.IP), outNode.ServerIP)
-		}
+		targetIP := pickNodeEntryIP(derefString(outNode.IP), outNode.ServerIP)
 		results = append(results, s.tcpPing(r.Context(), inNode, targetIP, int(outPort), "入口->出口"))
 		results = append(results, s.tcpPing(r.Context(), outNode, "www.google.com", 443, "出口->外网"))
 	}

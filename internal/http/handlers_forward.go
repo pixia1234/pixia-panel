@@ -560,10 +560,8 @@ func (s *Server) enqueueForwardGostCtx(ctx context.Context, fw *store.Forward, t
 		}
 		_ = s.enqueueGostCtx(ctx, tunnel.OutNodeID, action, remote)
 		outIP := tunnel.OutIP
-		if outIP == "" {
-			if outNode, err := s.store.GetNodeByID(ctx, tunnel.OutNodeID); err == nil {
-				outIP = pickNodeEntryIP(derefString(outNode.IP), outNode.ServerIP)
-			}
+		if outNode, err := s.store.GetNodeByID(ctx, tunnel.OutNodeID); err == nil {
+			outIP = pickNodeEntryIP(derefString(outNode.IP), outNode.ServerIP)
 		}
 		chains := gost.AddChainsData(name, outIP+":"+strconv.FormatInt(*fw.OutPort, 10), tunnel.Protocol, fw.InterfaceName)
 		if action == "UpdateService" {
