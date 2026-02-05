@@ -93,9 +93,17 @@ install_gost() {
   [[ -f "$INSTALL_DIR/gost" ]] && rm -f "$INSTALL_DIR/gost"
 
   echo "⬇️ 下载 gost..."
-  curl -L "$DOWNLOAD_URL" -o "$INSTALL_DIR/gost"
+  echo "📥 下载地址: $DOWNLOAD_URL"
+  if ! curl -fL "$DOWNLOAD_URL" -o "$INSTALL_DIR/gost"; then
+    echo "❌ 下载失败，请检查网络或下载链接。"
+    exit 1
+  fi
   if [[ ! -f "$INSTALL_DIR/gost" || ! -s "$INSTALL_DIR/gost" ]]; then
     echo "❌ 下载失败，请检查网络或下载链接。"
+    exit 1
+  fi
+  if ! head -c 4 "$INSTALL_DIR/gost" | grep -q $'\x7fELF'; then
+    echo "❌ 下载文件不是可执行程序，请检查下载链接是否正确。"
     exit 1
   fi
   chmod +x "$INSTALL_DIR/gost"
@@ -159,9 +167,16 @@ update_gost() {
   echo "📥 使用下载地址: $DOWNLOAD_URL"
 
   echo "⬇️ 下载最新版本..."
-  curl -L "$DOWNLOAD_URL" -o "$INSTALL_DIR/gost.new"
+  if ! curl -fL "$DOWNLOAD_URL" -o "$INSTALL_DIR/gost.new"; then
+    echo "❌ 下载失败。"
+    return 1
+  fi
   if [[ ! -f "$INSTALL_DIR/gost.new" || ! -s "$INSTALL_DIR/gost.new" ]]; then
     echo "❌ 下载失败。"
+    return 1
+  fi
+  if ! head -c 4 "$INSTALL_DIR/gost.new" | grep -q $'\x7fELF'; then
+    echo "❌ 下载文件不是可执行程序，请检查下载链接是否正确。"
     return 1
   fi
 

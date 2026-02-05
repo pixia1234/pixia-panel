@@ -7,6 +7,13 @@
 /node_modules/
 /vite-frontend/node_modules/
 /vite-frontend/dist/
+/go-gost/dist/
+/go-gost/gost
+/go-gost/config.json
+/go-gost/gost.json
+/go-gost/gost.json.bak
+/go-gost/gost.yml
+/go-gost/device.id
 
 # local/test data
 /test-run/
