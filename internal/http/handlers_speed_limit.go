@@ -13,6 +13,7 @@ type speedLimitCreateRequest struct {
 	Speed      int64  `json:"speed"`
 	TunnelID   int64  `json:"tunnelId"`
 	TunnelName string `json:"tunnelName"`
+	Status     *int64 `json:"status"`
 }
 
 type speedLimitUpdateRequest struct {
@@ -21,6 +22,7 @@ type speedLimitUpdateRequest struct {
 	Speed      int64  `json:"speed"`
 	TunnelID   int64  `json:"tunnelId"`
 	TunnelName string `json:"tunnelName"`
+	Status     *int64 `json:"status"`
 }
 
 type speedLimitDeleteRequest struct {
@@ -45,6 +47,9 @@ func (s *Server) handleSpeedLimitCreate(w http.ResponseWriter, r *http.Request) 
 		TunnelName:  req.TunnelName,
 		CreatedTime: time.Now().UnixMilli(),
 		Status:      1,
+	}
+	if req.Status != nil {
+		limit.Status = *req.Status
 	}
 	id, err := s.store.InsertSpeedLimit(r.Context(), limit)
 	if err != nil {
@@ -88,6 +93,9 @@ func (s *Server) handleSpeedLimitUpdate(w http.ResponseWriter, r *http.Request) 
 	limit.Speed = req.Speed
 	limit.TunnelID = req.TunnelID
 	limit.TunnelName = req.TunnelName
+	if req.Status != nil {
+		limit.Status = *req.Status
+	}
 	limit.UpdatedTime = ptrInt64(time.Now().UnixMilli())
 	if err := s.store.UpdateSpeedLimit(r.Context(), limit); err != nil {
 		writeJSON(w, http.StatusInternalServerError, Err("更新失败"))
