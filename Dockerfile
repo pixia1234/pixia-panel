@@ -21,6 +21,4 @@ ENV PIXIA_HTTP_ADDR=:6365 \
 
 EXPOSE 6365
 VOLUME ["/data"]
-USER app
-
 ENTRYPOINT ["/app/pixia-panel"]

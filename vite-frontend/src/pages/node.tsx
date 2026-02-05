@@ -18,7 +18,8 @@ import {
   getNodeList, 
   updateNode, 
   deleteNode,
-  getNodeInstallCommand
+  getNodeInstallCommand,
+  checkNodeStatus
 } from "@/api";
 
 interface Node {
@@ -107,17 +108,32 @@ export default function NodePage() {
     setLoading(true);
     try {
       const res = await getNodeList();
-      if (res.code === 0) {
-        setNodeList(res.data.map((node: any) => ({
-          ...node,
-          connectionStatus: node.status === 1 ? 'online' : 'offline',
-          systemInfo: null,
-          copyLoading: false
-        })));
-      } else {
-        toast.error(res.msg || '加载节点列表失败');
+      if (res.code !== 0) {
+        throw new Error(res.msg || '加载节点列表失败');
       }
+      if (!Array.isArray(res.data)) {
+        throw new Error('节点列表数据异常');
+      }
+      setNodeList(res.data.map((node: any) => ({
+        ...node,
+        connectionStatus: node.status === 1 ? 'online' : 'offline',
+        systemInfo: null,
+        copyLoading: false
+      })));
     } catch (error) {
+      try {
+        const fallback = await checkNodeStatus();
+        if (fallback.code === 0 && Array.isArray(fallback.data)) {
+          setNodeList(fallback.data.map((node: any) => ({
+            ...node,
+            connectionStatus: node.status === 1 ? 'online' : 'offline',
+            systemInfo: null,
+            copyLoading: false
+          })));
+          return;
+        }
+      } catch (_) {
+      }
       toast.error('网络错误，请重试');
     } finally {
       setLoading(false);

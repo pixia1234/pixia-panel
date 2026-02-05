@@ -171,10 +171,15 @@ func (s *Server) handleUserList(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusInternalServerError, Err("获取失败"))
 		return
 	}
+	filtered := make([]store.User, 0, len(users))
 	for i := range users {
+		if users[i].RoleID == 0 {
+			continue
+		}
 		users[i].Pwd = ""
+		filtered = append(filtered, users[i])
 	}
-	writeJSON(w, http.StatusOK, OK(users))
+	writeJSON(w, http.StatusOK, OK(filtered))
 }
 
 func (s *Server) handleUserUpdate(w http.ResponseWriter, r *http.Request) {
