@@ -89,17 +89,27 @@ const Network = {
           }
           resolve(response.data);
         })
-                 .catch(function(error: any) {
-           console.error('GET请求错误:', error);
-           
-           // 检查是否是401错误（token失效）
-           if (error.response && error.response.status === 401) {
-             handleTokenExpired();
-             return;
-           }
-           
-           resolve({"code": -1, "msg": error.message || "网络请求失败", "data": null as T});
-         });
+        .catch(function(error: any) {
+          console.error('GET请求错误:', error);
+          const resp = error?.response;
+
+          // 检查是否是401错误（token失效）
+          if (resp && resp.status === 401) {
+            handleTokenExpired();
+            return;
+          }
+
+          if (resp && resp.data) {
+            const data = resp.data;
+            const msg = typeof data === 'string' ? data : (data.msg || `请求失败(${resp.status})`);
+            const code = typeof data === 'object' && typeof data.code === 'number' ? data.code : -1;
+            resolve({"code": code, "msg": msg, "data": (typeof data === 'object' ? (data.data ?? null) : null) as T});
+            return;
+          }
+
+          const statusText = resp ? `${resp.status} ${resp.statusText || ''}`.trim() : '';
+          resolve({"code": -1, "msg": statusText ? `请求失败(${statusText})` : (error.message || "网络请求失败"), "data": null as T});
+        });
     });
   },
 
@@ -128,17 +138,27 @@ const Network = {
           }
           resolve(response.data);
         })
-                 .catch(function(error: any) {
-           console.error('POST请求错误:', error);
-           
-           // 检查是否是401错误（token失效）
-           if (error.response && error.response.status === 401) {
-             handleTokenExpired();
-             return;
-           }
-           
-           resolve({"code": -1, "msg": error.message || "网络请求失败", "data": null as T});
-         });
+        .catch(function(error: any) {
+          console.error('POST请求错误:', error);
+          const resp = error?.response;
+
+          // 检查是否是401错误（token失效）
+          if (resp && resp.status === 401) {
+            handleTokenExpired();
+            return;
+          }
+
+          if (resp && resp.data) {
+            const data = resp.data;
+            const msg = typeof data === 'string' ? data : (data.msg || `请求失败(${resp.status})`);
+            const code = typeof data === 'object' && typeof data.code === 'number' ? data.code : -1;
+            resolve({"code": code, "msg": msg, "data": (typeof data === 'object' ? (data.data ?? null) : null) as T});
+            return;
+          }
+
+          const statusText = resp ? `${resp.status} ${resp.statusText || ''}`.trim() : '';
+          resolve({"code": -1, "msg": statusText ? `请求失败(${statusText})` : (error.message || "网络请求失败"), "data": null as T});
+        });
     });
   }
 };

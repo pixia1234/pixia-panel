@@ -166,10 +166,13 @@ export default function IndexPage() {
       
       if (response.code !== 0) {
         toast.error(response.msg || "登录失败");
+        setPendingLogin(false);
         if (turnstileWidgetRef.current && (window as any).turnstile) {
           (window as any).turnstile.reset(turnstileWidgetRef.current);
         }
         setForm(prev => ({ ...prev, turnstileToken: "" }));
+        // 登录失败后强制刷新页面，重新获取验证码
+        setTimeout(() => window.location.reload(), 800);
         return;
       }
 
