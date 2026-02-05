@@ -174,6 +174,19 @@ func (s *Server) handleForwardList(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusInternalServerError, Err("获取失败"))
 		return
 	}
+	if len(list) > 0 {
+		if nodes, err := s.store.ListNodes(r.Context()); err == nil {
+			nodeMap := make(map[int64]store.Node, len(nodes))
+			for _, n := range nodes {
+				nodeMap[n.ID] = n
+			}
+			for i := range list {
+				if n, ok := nodeMap[list[i].InNodeID]; ok {
+					list[i].InIP = pickNodeEntryIP(derefString(n.IP), n.ServerIP)
+				}
+			}
+		}
+	}
 	writeJSON(w, http.StatusOK, OK(list))
 }
 
