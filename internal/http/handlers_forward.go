@@ -1,6 +1,7 @@
 package httpapi
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"net"
@@ -153,10 +154,7 @@ func (s *Server) handleForwardCreate(w http.ResponseWriter, r *http.Request) {
 	}
 	fw.ID = id
 
-	limiter := (*int64)(nil)
-	if userTunnel != nil {
-		limiter = userTunnel.SpeedID
-	}
+	limiter := s.resolveSpeedLimiter(r, currentUserID, req.TunnelID)
 	s.enqueueForwardGost(r, fw, tunnel, limiter, "AddService")
 
 	writeJSON(w, http.StatusOK, OK("ok"))
@@ -542,25 +540,45 @@ func (s *Server) listUsedPortsOnNode(r *http.Request, nodeID int64, excludeID *i
 }
 
 func (s *Server) enqueueForwardGost(r *http.Request, fw *store.Forward, tunnel *store.Tunnel, limiter *int64, action string) {
-	name := buildServiceName(fw.ID, fw.UserID, s.resolveUserTunnelID(r, fw.UserID, fw.TunnelID))
+	s.enqueueForwardGostCtx(r.Context(), fw, tunnel, limiter, action)
+}
+
+func (s *Server) enqueueForwardGostCtx(ctx context.Context, fw *store.Forward, tunnel *store.Tunnel, limiter *int64, action string) {
+	name := buildServiceName(fw.ID, fw.UserID, s.resolveUserTunnelIDCtx(ctx, fw.UserID, fw.TunnelID))
+	s.ensureLimiterConfig(ctx, tunnel.InNodeID, limiter)
 	data := gost.AddServiceData(name, fw.InPort, limiter, fw.RemoteAddr, gost.TunnelConfig{Type: tunnel.Type, Protocol: tunnel.Protocol, TCPListenAddr: tunnel.TCPListenAddr, UDPListenAddr: tunnel.UDPListenAddr}, fw.Strategy, fw.InterfaceName)
 	if action == "UpdateService" {
 		data = gost.UpdateServiceData(name, fw.InPort, limiter, fw.RemoteAddr, gost.TunnelConfig{Type: tunnel.Type, Protocol: tunnel.Protocol, TCPListenAddr: tunnel.TCPListenAddr, UDPListenAddr: tunnel.UDPListenAddr}, fw.Strategy, fw.InterfaceName)
 	}
-	_ = s.enqueueGost(r, tunnel.InNodeID, action, data)
+	_ = s.enqueueGostCtx(ctx, tunnel.InNodeID, action, data)
 
 	if tunnel.Type == 2 && fw.OutPort != nil {
-		remote := gost.AddRemoteServiceData(name, *fw.OutPort, fw.RemoteAddr, tunnel.Protocol, fw.Strategy, fw.InterfaceName)
+		s.ensureLimiterConfig(ctx, tunnel.OutNodeID, limiter)
+		remote := gost.AddRemoteServiceData(name, *fw.OutPort, fw.RemoteAddr, tunnel.Protocol, fw.Strategy, fw.InterfaceName, limiter)
 		if action == "UpdateService" {
-			remote = gost.UpdateRemoteServiceData(name, *fw.OutPort, fw.RemoteAddr, tunnel.Protocol, fw.Strategy, fw.InterfaceName)
+			remote = gost.UpdateRemoteServiceData(name, *fw.OutPort, fw.RemoteAddr, tunnel.Protocol, fw.Strategy, fw.InterfaceName, limiter)
 		}
-		_ = s.enqueueGost(r, tunnel.OutNodeID, action, remote)
+		_ = s.enqueueGostCtx(ctx, tunnel.OutNodeID, action, remote)
 		chains := gost.AddChainsData(name, tunnel.OutIP+":"+strconv.FormatInt(*fw.OutPort, 10), tunnel.Protocol, fw.InterfaceName)
 		if action == "UpdateService" {
 			chains = gost.UpdateChainsData(name, tunnel.OutIP+":"+strconv.FormatInt(*fw.OutPort, 10), tunnel.Protocol, fw.InterfaceName)
 		}
-		_ = s.enqueueGost(r, tunnel.InNodeID, map[string]string{"AddService": "AddChains", "UpdateService": "UpdateChains"}[action], chains)
+		_ = s.enqueueGostCtx(ctx, tunnel.InNodeID, map[string]string{"AddService": "AddChains", "UpdateService": "UpdateChains"}[action], chains)
 	}
+}
+
+func (s *Server) ensureLimiterConfig(ctx context.Context, nodeID int64, limiterID *int64) {
+	if limiterID == nil {
+		return
+	}
+	limit, err := s.store.GetSpeedLimitByID(ctx, *limiterID)
+	if err != nil || limit.Status != 1 {
+		return
+	}
+	addData := gost.AddLimitersData(limit.ID, limit.Speed)
+	_ = s.enqueueGostCtx(ctx, nodeID, "AddLimiters", addData)
+	updateData := gost.UpdateLimitersData(limit.ID, limit.Speed)
+	_ = s.enqueueGostCtx(ctx, nodeID, "UpdateLimiters", updateData)
 }
 
 func dialAddr(addr string) error {

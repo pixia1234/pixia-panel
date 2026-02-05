@@ -243,7 +243,8 @@ func (s *Server) handleTunnelUpdate(w http.ResponseWriter, r *http.Request) {
 		data := gost.UpdateServiceData(name, fw.InPort, limiter, fw.RemoteAddr, gost.TunnelConfig{Type: tunnel.Type, Protocol: tunnel.Protocol, TCPListenAddr: tunnel.TCPListenAddr, UDPListenAddr: tunnel.UDPListenAddr}, fw.Strategy, fw.InterfaceName)
 		_ = s.enqueueGost(r, tunnel.InNodeID, "UpdateService", data)
 		if tunnel.Type == 2 && fw.OutPort != nil {
-			remote := gost.UpdateRemoteServiceData(name, *fw.OutPort, fw.RemoteAddr, tunnel.Protocol, fw.Strategy, fw.InterfaceName)
+			s.ensureLimiterConfig(r.Context(), tunnel.OutNodeID, limiter)
+			remote := gost.UpdateRemoteServiceData(name, *fw.OutPort, fw.RemoteAddr, tunnel.Protocol, fw.Strategy, fw.InterfaceName, limiter)
 			_ = s.enqueueGost(r, tunnel.OutNodeID, "UpdateService", remote)
 			chains := gost.UpdateChainsData(name, tunnel.OutIP+":"+strconv.FormatInt(*fw.OutPort, 10), tunnel.Protocol, fw.InterfaceName)
 			_ = s.enqueueGost(r, tunnel.InNodeID, "UpdateChains", chains)
@@ -491,11 +492,21 @@ func equalInt64Ptr(a, b *int64) bool {
 }
 
 func (s *Server) resolveSpeedLimiter(r *http.Request, userID, tunnelID int64) *int64 {
-	ut, err := s.store.GetUserTunnelByUserAndTunnel(r.Context(), userID, tunnelID)
+	return s.resolveSpeedLimiterCtx(r.Context(), userID, tunnelID)
+}
+
+func (s *Server) resolveSpeedLimiterCtx(ctx context.Context, userID, tunnelID int64) *int64 {
+	ut, err := s.store.GetUserTunnelByUserAndTunnel(ctx, userID, tunnelID)
+	if err == nil && ut.SpeedID != nil {
+		if limit, err := s.store.GetSpeedLimitByID(ctx, *ut.SpeedID); err == nil && limit.Status == 1 {
+			return &limit.ID
+		}
+	}
+	limit, err := s.store.GetActiveSpeedLimitByTunnel(ctx, tunnelID)
 	if err != nil {
 		return nil
 	}
-	return ut.SpeedID
+	return &limit.ID
 }
 
 func (s *Server) decorateTunnels(ctx context.Context, tunnels []store.Tunnel) []tunnelView {

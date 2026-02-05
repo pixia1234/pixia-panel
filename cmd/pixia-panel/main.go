@@ -49,9 +49,10 @@ func main() {
 	server := httpapi.NewServer(store, flowService, hub, jwtSecret, jwtTTL)
 	router := http.NewServeMux()
 	server.Register(router)
-	router.Handle(wsPath, hub.ServeWS(store))
+	lookup := nodeLookup{store: store, api: server}
+	router.Handle(wsPath, hub.ServeWS(lookup))
 	if wsPath != "/ws" {
-		router.Handle("/ws", hub.ServeWS(store))
+		router.Handle("/ws", hub.ServeWS(lookup))
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -87,4 +88,21 @@ func getenvDurationDefault(key string, def time.Duration) time.Duration {
 		}
 	}
 	return def
+}
+
+type nodeLookup struct {
+	store *store.Store
+	api   *httpapi.Server
+}
+
+func (n nodeLookup) LookupBySecret(ctx context.Context, secret string) (int64, error) {
+	return n.store.LookupBySecret(ctx, secret)
+}
+
+func (n nodeLookup) UpdateNodeStatus(ctx context.Context, nodeID int64, status int64, version *string, http, tls, socks *int64) error {
+	return n.store.UpdateNodeStatus(ctx, nodeID, status, version, http, tls, socks)
+}
+
+func (n nodeLookup) ResyncNode(ctx context.Context, nodeID int64) {
+	n.api.ResyncNode(ctx, nodeID)
 }

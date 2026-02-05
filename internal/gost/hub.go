@@ -167,6 +167,10 @@ type NodeStatusUpdater interface {
 	UpdateNodeStatus(ctx context.Context, nodeID int64, status int64, version *string, http, tls, socks *int64) error
 }
 
+type NodeResyncer interface {
+	ResyncNode(ctx context.Context, nodeID int64)
+}
+
 // ServeWS upgrades and registers a websocket connection for a node.
 func (h *Hub) ServeWS(lookup NodeLookup) http.HandlerFunc {
 	upgrader := websocket.Upgrader{
@@ -220,6 +224,9 @@ func (h *Hub) ServeWS(lookup NodeLookup) http.HandlerFunc {
 		h.Register(nodeID, conn, secret)
 		h.updateNodeStatus(r, lookup, nodeID, 1)
 		h.broadcastStatus(nodeID, 1)
+		if resyncer, ok := lookup.(NodeResyncer); ok {
+			go resyncer.ResyncNode(r.Context(), nodeID)
+		}
 		defer func() {
 			h.updateNodeStatus(r, lookup, nodeID, 0)
 			h.broadcastStatus(nodeID, 0)

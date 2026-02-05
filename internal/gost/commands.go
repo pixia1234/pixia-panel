@@ -23,18 +23,20 @@ func TcpPingData(ip string, port int) json.RawMessage {
 }
 
 func AddLimitersData(name int64, speed int64) json.RawMessage {
+	limit := limiterValue(speed)
 	return mustJSON(map[string]any{
 		"name":   int64ToString(name),
-		"limits": []string{"$ " + int64ToString(speed) + "MB " + int64ToString(speed) + "MB"},
+		"limits": []string{"$ " + limit + " " + limit, "$$ " + limit + " " + limit},
 	})
 }
 
 func UpdateLimitersData(name int64, speed int64) json.RawMessage {
+	limit := limiterValue(speed)
 	return mustJSON(map[string]any{
 		"limiter": int64ToString(name),
 		"data": map[string]any{
 			"name":   int64ToString(name),
-			"limits": []string{"$ " + int64ToString(speed) + "MB " + int64ToString(speed) + "MB"},
+			"limits": []string{"$ " + limit + " " + limit, "$$ " + limit + " " + limit},
 		},
 	})
 }
@@ -67,7 +69,7 @@ func DeleteServiceData(name string) json.RawMessage {
 	})
 }
 
-func AddRemoteServiceData(name string, outPort int64, remoteAddr string, protocol string, strategy string, interfaceName *string) json.RawMessage {
+func AddRemoteServiceData(name string, outPort int64, remoteAddr string, protocol string, strategy string, interfaceName *string, limiter *int64) json.RawMessage {
 	data := map[string]any{
 		"name":     name + "_tls",
 		"addr":     ":" + int64ToString(outPort),
@@ -77,12 +79,18 @@ func AddRemoteServiceData(name string, outPort int64, remoteAddr string, protoco
 	if interfaceName != nil && strings.TrimSpace(*interfaceName) != "" {
 		data["metadata"] = map[string]any{"interface": *interfaceName}
 	}
+	if limiter != nil {
+		data["limiter"] = int64ToString(*limiter)
+		if handler, ok := data["handler"].(map[string]any); ok {
+			handler["limiter"] = int64ToString(*limiter)
+		}
+	}
 	data["forwarder"] = createForwarder(remoteAddr, strategy)
 	return mustJSON([]any{data})
 }
 
-func UpdateRemoteServiceData(name string, outPort int64, remoteAddr string, protocol string, strategy string, interfaceName *string) json.RawMessage {
-	return AddRemoteServiceData(name, outPort, remoteAddr, protocol, strategy, interfaceName)
+func UpdateRemoteServiceData(name string, outPort int64, remoteAddr string, protocol string, strategy string, interfaceName *string, limiter *int64) json.RawMessage {
+	return AddRemoteServiceData(name, outPort, remoteAddr, protocol, strategy, interfaceName, limiter)
 }
 
 func DeleteRemoteServiceData(name string) json.RawMessage {
@@ -174,7 +182,11 @@ func createServiceConfig(name string, inPort int64, limiter *int64, remoteAddr s
 	if limiter != nil {
 		service["limiter"] = int64ToString(*limiter)
 	}
-	service["handler"] = createHandler(protocol, name, tunnel.Type)
+	handler := createHandler(protocol, name, tunnel.Type)
+	if limiter != nil {
+		handler["limiter"] = int64ToString(*limiter)
+	}
+	service["handler"] = handler
 	service["listener"] = createListener(protocol)
 	if tunnel.Type == 1 {
 		service["forwarder"] = createForwarder(remoteAddr, strategy)
@@ -215,6 +227,18 @@ func createForwarder(remoteAddr string, strategy string) map[string]any {
 
 func int64ToString(v int64) string {
 	return strconv.FormatInt(v, 10)
+}
+
+func limiterValue(speed int64) string {
+	if speed <= 0 {
+		speed = 1
+	}
+	// UI uses Mbps; gost traffic limiter expects bytes per second.
+	bytes := speed * 1024 * 1024 / 8
+	if bytes < 1 {
+		bytes = 1
+	}
+	return int64ToString(bytes) + "B"
 }
 
 func mustJSON(v any) json.RawMessage {

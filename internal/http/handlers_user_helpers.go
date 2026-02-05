@@ -1,6 +1,7 @@
 package httpapi
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -37,8 +38,12 @@ func (s *Server) deleteUserCascade(r *http.Request, userID int64) error {
 }
 
 func (s *Server) enqueueGost(r *http.Request, nodeID int64, action string, data json.RawMessage) error {
+	return s.enqueueGostCtx(r.Context(), nodeID, action, data)
+}
+
+func (s *Server) enqueueGostCtx(ctx context.Context, nodeID int64, action string, data json.RawMessage) error {
 	payload := outbox.GostMessage{NodeID: nodeID, Action: action, Data: data}
 	b, _ := json.Marshal(payload)
-	_, err := s.store.EnqueueOutbox(r.Context(), action, b)
+	_, err := s.store.EnqueueOutbox(ctx, action, b)
 	return err
 }

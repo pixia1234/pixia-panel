@@ -1,6 +1,7 @@
 package httpapi
 
 import (
+	"context"
 	"encoding/json"
 	"io"
 	"net/http"
@@ -301,7 +302,11 @@ func (s *Server) pauseForwardByID(r *http.Request, forwardID int64) {
 }
 
 func (s *Server) resolveUserTunnelID(r *http.Request, userID, tunnelID int64) int64 {
-	ut, err := s.store.GetUserTunnelByUserAndTunnel(r.Context(), userID, tunnelID)
+	return s.resolveUserTunnelIDCtx(r.Context(), userID, tunnelID)
+}
+
+func (s *Server) resolveUserTunnelIDCtx(ctx context.Context, userID, tunnelID int64) int64 {
+	ut, err := s.store.GetUserTunnelByUserAndTunnel(ctx, userID, tunnelID)
 	if err != nil {
 		return 0
 	}

@@ -29,6 +29,29 @@ func (s *Store) ListSpeedLimits(ctx context.Context) ([]SpeedLimit, error) {
 	return list, rows.Err()
 }
 
+func (s *Store) GetActiveSpeedLimitByTunnel(ctx context.Context, tunnelID int64) (*SpeedLimit, error) {
+	row := s.db.QueryRowContext(ctx, `SELECT id, name, speed, tunnel_id, tunnel_name, created_time, updated_time, status FROM speed_limit WHERE tunnel_id = ? AND status = 1 ORDER BY id LIMIT 1`, tunnelID)
+	return scanSpeedLimit(row)
+}
+
+func (s *Store) ListActiveSpeedLimitsByTunnel(ctx context.Context, tunnelID int64) ([]SpeedLimit, error) {
+	rows, err := s.db.QueryContext(ctx, `SELECT id, name, speed, tunnel_id, tunnel_name, created_time, updated_time, status FROM speed_limit WHERE tunnel_id = ? AND status = 1 ORDER BY id`, tunnelID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var list []SpeedLimit
+	for rows.Next() {
+		item, err := scanSpeedLimit(rows)
+		if err != nil {
+			return nil, err
+		}
+		list = append(list, *item)
+	}
+	return list, rows.Err()
+}
+
 func (s *Store) InsertSpeedLimit(ctx context.Context, limit *SpeedLimit) (int64, error) {
 	res, err := s.db.ExecContext(ctx, `INSERT INTO speed_limit(name, speed, tunnel_id, tunnel_name, created_time, updated_time, status)
 		VALUES(?, ?, ?, ?, ?, ?, ?)`, limit.Name, limit.Speed, limit.TunnelID, limit.TunnelName, limit.CreatedTime, limit.UpdatedTime, limit.Status)

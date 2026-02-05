@@ -9,6 +9,7 @@
 /vite-frontend/dist/
 /go-gost/dist/
 /go-gost/gost
+/pixia-panel
 /go-gost/config.json
 /go-gost/gost.json
 /go-gost/gost.json.bak
