@@ -6,7 +6,7 @@ export LC_ALL=C
 
 PANEL_VERSION="0.2.8"
 REPO="pixia1234/pixia-panel"
-RELEASE_TAG="v${PANEL_VERSION}"
+RELEASE_TAG="${PANEL_VERSION}"
 BASE_URL="https://github.com/${REPO}/releases/download/${RELEASE_TAG}"
 DOCKER_COMPOSEV4_URL="${BASE_URL}/docker-compose-v4.yml"
 DOCKER_COMPOSEV6_URL="${BASE_URL}/docker-compose-v6.yml"

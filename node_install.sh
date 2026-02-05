@@ -17,7 +17,7 @@ get_architecture() {
 
 GOST_VERSION="0.2.8"
 REPO="pixia1234/pixia-panel"
-RELEASE_TAG="v${GOST_VERSION}"
+RELEASE_TAG="${GOST_VERSION}"
 BASE_URL="https://github.com/${REPO}/releases/download/${RELEASE_TAG}"
 INSTALL_DIR="/etc/gost"
 
