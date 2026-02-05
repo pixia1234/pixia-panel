@@ -21,6 +21,7 @@ type tunnelCreateRequest struct {
 	Protocol      string  `json:"protocol"`
 	TCPListenAddr string  `json:"tcpListenAddr"`
 	UDPListenAddr string  `json:"udpListenAddr"`
+	Status        *int64  `json:"status"`
 }
 
 type tunnelUpdateRequest struct {
@@ -132,6 +133,9 @@ func (s *Server) handleTunnelCreate(w http.ResponseWriter, r *http.Request) {
 		CreatedTime:   time.Now().UnixMilli(),
 		UpdatedTime:   time.Now().UnixMilli(),
 		Status:        1,
+	}
+	if req.Status != nil {
+		tunnel.Status = *req.Status
 	}
 
 	if _, err := s.store.InsertTunnel(r.Context(), tunnel); err != nil {
