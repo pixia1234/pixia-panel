@@ -27,12 +27,16 @@ type tunnelCreateRequest struct {
 type tunnelUpdateRequest struct {
 	ID            int64   `json:"id"`
 	Name          string  `json:"name"`
+	Type          *int64  `json:"type"`
+	InNodeID      *int64  `json:"inNodeId"`
+	OutNodeID     *int64  `json:"outNodeId"`
 	Flow          int64   `json:"flow"`
 	TrafficRatio  float64 `json:"trafficRatio"`
 	Protocol      string  `json:"protocol"`
 	TCPListenAddr string  `json:"tcpListenAddr"`
 	UDPListenAddr string  `json:"udpListenAddr"`
 	InterfaceName *string `json:"interfaceName"`
+	Status        *int64  `json:"status"`
 }
 
 type tunnelDeleteRequest struct {
@@ -193,12 +197,36 @@ func (s *Server) handleTunnelUpdate(w http.ResponseWriter, r *http.Request) {
 	}
 
 	tunnel.Name = req.Name
+	if req.Type != nil {
+		tunnel.Type = *req.Type
+	}
+	if req.InNodeID != nil {
+		inNode, err := s.store.GetNodeByID(r.Context(), *req.InNodeID)
+		if err != nil {
+			writeJSON(w, http.StatusBadRequest, Err("入口节点不存在"))
+			return
+		}
+		tunnel.InNodeID = *req.InNodeID
+		tunnel.InIP = derefString(inNode.IP)
+	}
+	if req.OutNodeID != nil {
+		outNode, err := s.store.GetNodeByID(r.Context(), *req.OutNodeID)
+		if err != nil {
+			writeJSON(w, http.StatusBadRequest, Err("出口节点不存在"))
+			return
+		}
+		tunnel.OutNodeID = *req.OutNodeID
+		tunnel.OutIP = outNode.ServerIP
+	}
 	tunnel.Flow = req.Flow
 	tunnel.TrafficRatio = req.TrafficRatio
 	tunnel.Protocol = req.Protocol
 	tunnel.TCPListenAddr = req.TCPListenAddr
 	tunnel.UDPListenAddr = req.UDPListenAddr
 	tunnel.InterfaceName = req.InterfaceName
+	if req.Status != nil {
+		tunnel.Status = *req.Status
+	}
 	tunnel.UpdatedTime = time.Now().UnixMilli()
 
 	if err := s.store.UpdateTunnel(r.Context(), tunnel); err != nil {
