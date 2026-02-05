@@ -47,4 +47,4 @@ networks:
     ipam:
       config:
         - subnet: 172.30.0.0/16
-        - subnet: fd00:pixia:panel::/48
+        - subnet: fd00:1234:5678::/48

@@ -130,13 +130,10 @@ get_config_params() {
   read -p "JWT 密钥（默认随机生成）: " JWT_SECRET
   JWT_SECRET=${JWT_SECRET:-$(generate_random)}
 
-  DEFAULT_BACKEND_IMAGE="pixia1234/pixia-panel-backend:${PANEL_VERSION}"
-  DEFAULT_FRONTEND_IMAGE="pixia1234/pixia-panel-frontend:${PANEL_VERSION}"
+  DEFAULT_BACKEND_IMAGE="pixia1234/pixia-panel-backend:latest"
+  DEFAULT_FRONTEND_IMAGE="pixia1234/pixia-panel-frontend:latest"
 
-  read -p "后端镜像（默认 ${DEFAULT_BACKEND_IMAGE}）: " PIXIA_BACKEND_IMAGE
   PIXIA_BACKEND_IMAGE=${PIXIA_BACKEND_IMAGE:-$DEFAULT_BACKEND_IMAGE}
-
-  read -p "前端镜像（默认 ${DEFAULT_FRONTEND_IMAGE}）: " PIXIA_FRONTEND_IMAGE
   PIXIA_FRONTEND_IMAGE=${PIXIA_FRONTEND_IMAGE:-$DEFAULT_FRONTEND_IMAGE}
 }
 
