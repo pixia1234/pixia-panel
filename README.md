@@ -1,6 +1,6 @@
 # pixia-panel
 
-Go + SQLite 重写版flux面板。
+基于Gost + Go + SQLite 的转发面板。
 
 ## 部署流程
 
@@ -26,19 +26,6 @@ curl -L https://raw.githubusercontent.com/pixia1234/pixia-panel/refs/heads/main/
 密码: admin_user  
 ⚠️ 首次登录后请立即修改默认密码！
 
-## 一键安装（面板）
-
-```
-curl -fsSL https://raw.githubusercontent.com/pixia1234/pixia-panel/main/panel_install.sh -o panel_install.sh
-bash panel_install.sh
-```
-
-## 一键安装（节点）
-
-```
-curl -fsSL https://raw.githubusercontent.com/pixia1234/pixia-panel/main/node_install.sh -o node_install.sh
-bash node_install.sh -a 面板IP:端口 -s 节点密钥
-```
 
 ## 构建节点 gost（发布用）
 
