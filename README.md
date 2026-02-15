@@ -20,6 +20,76 @@ curl -L https://raw.githubusercontent.com/pixia1234/pixia-panel/refs/heads/main/
 curl -L https://raw.githubusercontent.com/pixia1234/pixia-panel/refs/heads/main/node_install.sh -o node_install.sh && chmod +x node_install.sh && ./node_install.sh
 ```
 ⚠️在公网环境部署节点时，请与面板用**https**通信，否则是明文传输。
+
+## 架构说明
+
+### 总体架构
+
+- **控制面（Panel）**：`Go + SQLite`，提供用户、节点、隧道、转发、限速、配置等 API。
+- **展示层（Frontend）**：`Vite + React` 构建的前端页面，通过 API 与后端通信。
+- **数据面（Node）**：每台节点运行裁剪后的 `gost`，与面板保持 WebSocket 连接并接收控制指令。
+
+### 关键数据流
+
+1. 节点使用 `secret` 与面板建立 WebSocket 连接，面板维护在线状态并接收节点系统信息。
+2. 管理员/用户在前端发起操作（创建转发、修改隧道等），后端写入 SQLite 并生成对应 gost 指令。
+3. 指令通过 outbox 队列异步下发到节点，降低瞬时失败对业务请求的影响。
+4. 节点回传执行结果/运行状态，前端实时刷新在线状态与监控指标。
+
+### 后端模块概览
+
+- `internal/http`：API 路由、鉴权、中间件、业务处理。
+- `internal/store`：数据库访问层。
+- `internal/gost`：gost 指令构建与 WebSocket Hub。
+- `internal/outbox`：异步消息投递与重试。
+- `internal/tasks`：定时任务（流量统计、到期处理、每日重置）。
+- `migrations`：数据库迁移脚本。
+
+## 升级方法
+
+### 一、面板升级（推荐）
+
+建议每次升级前先重新下载最新版脚本：
+
+```bash
+curl -L https://raw.githubusercontent.com/pixia1234/pixia-panel/refs/heads/main/panel_install.sh -o panel_install.sh && chmod +x panel_install.sh
+```
+
+执行后选择菜单 **2. 更新面板**：
+
+```bash
+./panel_install.sh
+```
+
+升级脚本会自动完成：
+
+- 下载对应版本的 `docker-compose` 文件；
+- 拉取最新镜像并重建容器；
+- 保留现有数据卷（含 `pixia.db`）。
+
+### 二、升级前备份（强烈建议）
+
+同样运行脚本并选择 **4. 导出备份**：
+
+```bash
+./panel_install.sh
+```
+
+会在当前目录导出 `pixia-backup-*.db`。
+
+### 三、节点升级
+
+在每个节点机器上执行：
+
+```bash
+curl -L https://raw.githubusercontent.com/pixia1234/pixia-panel/refs/heads/main/node_install.sh -o node_install.sh && chmod +x node_install.sh
+./node_install.sh
+```
+
+选择菜单 **2. 更新** 即可完成节点 gost 二进制升级。
+
+或在面板可以直接获取一键安装脚本 运行即可。
+
 ## 默认管理员账号
 
 账号: admin_user  
