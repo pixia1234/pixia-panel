@@ -2,7 +2,14 @@
 set -euo pipefail
 
 ROOT_DIR=$(cd "$(dirname "$0")" && pwd)
-OUT_DIR=${1:-"$ROOT_DIR/dist"}
+if [[ $# -gt 0 ]]; then
+  case "$1" in
+    /*) OUT_DIR="$1" ;;
+    *) OUT_DIR="$(pwd)/$1" ;;
+  esac
+else
+  OUT_DIR="$ROOT_DIR/dist"
+fi
 
 mkdir -p "$OUT_DIR"
 
