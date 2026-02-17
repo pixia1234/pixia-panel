@@ -9,11 +9,12 @@ mkdir -p "$OUT_DIR"
 cd "$ROOT_DIR"
 
 export GOCACHE=${GOCACHE:-/tmp/go-build-gost}
+export CGO_ENABLED=0
 
-echo "🔧 构建 gost-amd64..."
+echo "🔧 构建 gost-amd64 (CGO_ENABLED=${CGO_ENABLED})..."
 GOOS=linux GOARCH=amd64 go build -trimpath -ldflags "-s -w" -o "$OUT_DIR/gost-amd64" .
 
-echo "🔧 构建 gost-arm64..."
+echo "🔧 构建 gost-arm64 (CGO_ENABLED=${CGO_ENABLED})..."
 GOOS=linux GOARCH=arm64 go build -trimpath -ldflags "-s -w" -o "$OUT_DIR/gost-arm64" .
 
 if command -v upx >/dev/null 2>&1; then
