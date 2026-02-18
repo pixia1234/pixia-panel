@@ -17,6 +17,7 @@ import (
 
 	"github.com/go-gost/x/config"
 	"github.com/go-gost/x/internal/util/crypto"
+	"github.com/go-gost/x/registry"
 	"github.com/go-gost/x/service"
 	"github.com/gorilla/websocket"
 	"github.com/shirou/gopsutil/v3/cpu"
@@ -296,12 +297,12 @@ func (w *WebSocketReporter) connect() error {
 
 	// 重新读取 config.json 获取最新的协议配置
 	type LocalConfig struct {
-		Addr      string `json:"addr"`
-		Secret    string `json:"secret"`
-		WsPath    string `json:"ws_path"`
-		Http      int    `json:"http"`
-		Tls       int    `json:"tls"`
-		Socks     int    `json:"socks"`
+		Addr   string `json:"addr"`
+		Secret string `json:"secret"`
+		WsPath string `json:"ws_path"`
+		Http   int    `json:"http"`
+		Tls    int    `json:"tls"`
+		Socks  int    `json:"socks"`
 	}
 
 	var cfg LocalConfig
@@ -743,7 +744,35 @@ func (w *WebSocketReporter) handleUpdateService(data interface{}) error {
 	}
 
 	req := updateServicesRequest{Data: services}
-	return updateServices(req)
+	if err := updateServices(req); err == nil {
+		return nil
+	} else {
+		if !strings.Contains(err.Error(), "not found") {
+			return err
+		}
+
+		var addServices []config.ServiceConfig
+		for _, serviceConfig := range services {
+			name := strings.TrimSpace(serviceConfig.Name)
+			if name == "" {
+				addServices = append(addServices, serviceConfig)
+				continue
+			}
+			if registry.ServiceRegistry().Get(name) == nil {
+				addServices = append(addServices, serviceConfig)
+			}
+		}
+
+		if len(addServices) == 0 {
+			return err
+		}
+
+		if addErr := createServices(createServicesRequest{Data: addServices}); addErr != nil {
+			return fmt.Errorf("update service failed: %v; fallback add service failed: %v", err, addErr)
+		}
+
+		return nil
+	}
 }
 
 func (w *WebSocketReporter) handleDeleteService(data interface{}) error {

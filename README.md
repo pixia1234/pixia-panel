@@ -21,6 +21,10 @@ curl -L https://raw.githubusercontent.com/pixia1234/pixia-panel/refs/heads/main/
 ```
 ⚠️在公网环境部署节点时，请与面板用**https**通信，否则是明文传输。
 
+## 发版日志
+
+版本变更记录见：`CHANGELOG.md`。
+
 ## 架构说明
 
 ### 总体架构
