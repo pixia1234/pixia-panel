@@ -24,11 +24,6 @@ jobs:
       - name: Build static gost binaries
         run: ./go-gost/build.sh ./go-gost/dist
 
-      - name: Generate gost checksums
-        run: |
-          sha256sum go-gost/dist/gost-amd64 > go-gost/dist/gost-amd64.sha256
-          sha256sum go-gost/dist/gost-arm64 > go-gost/dist/gost-arm64.sha256
-
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
 
@@ -92,6 +87,4 @@ jobs:
             docker-compose-v6.yml
             go-gost/dist/gost-amd64
             go-gost/dist/gost-arm64
-            go-gost/dist/gost-amd64.sha256
-            go-gost/dist/gost-arm64.sha256
           overwrite_files: true
