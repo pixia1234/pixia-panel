@@ -2,11 +2,12 @@
 
 <div align="center">
 
-[![Go](https://img.shields.io/badge/Go-1.25.7-00ADD8.svg)](https://golang.org/)
-[![Vue](https://img.shields.io/badge/Vue-3.4+-4FC08D.svg)](https://vuejs.org/)
-[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15+-336791.svg)](https://www.postgresql.org/)
-[![Redis](https://img.shields.io/badge/Redis-7+-DC382D.svg)](https://redis.io/)
+[![Go](https://img.shields.io/github/go-mod/go-version/pixia1234/pixia-panel?label=Go&color=00ADD8)](https://golang.org/)
+[![React](https://img.shields.io/badge/React-18.3+-61DAFB.svg)](https://react.dev/)
+[![SQLite](https://img.shields.io/badge/SQLite-3-003B57.svg)](https://www.sqlite.org/)
 [![Docker](https://img.shields.io/badge/Docker-Ready-2496ED.svg)](https://www.docker.com/)
+[![Go Report Card](https://goreportcard.com/badge/github.com/pixia1234/pixia-panel)](https://goreportcard.com/report/github.com/pixia1234/pixia-panel)
+[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
 
 </div>
 
