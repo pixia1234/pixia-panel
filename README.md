@@ -4,10 +4,9 @@
 
 [![Go](https://img.shields.io/github/go-mod/go-version/pixia1234/pixia-panel?label=Go&color=00ADD8)](https://golang.org/)
 [![React](https://img.shields.io/badge/React-18.3+-61DAFB.svg)](https://react.dev/)
-[![Docker](https://img.shields.io/badge/Docker-Ready-2496ED.svg)](https://www.docker.com/)
 [![Docker Publish](https://github.com/pixia1234/pixia-panel/actions/workflows/docker-publish.yml/badge.svg)](https://github.com/pixia1234/pixia-panel/actions/workflows/docker-publish.yml)
 [![Dev CI](https://github.com/pixia1234/pixia-panel/actions/workflows/ci-dev.yml/badge.svg?branch=dev)](https://github.com/pixia1234/pixia-panel/actions/workflows/ci-dev.yml)
-[![Release](https://img.shields.io/github/v/release/pixia1234/pixia-panel?display_name=tag)](https://github.com/pixia1234/pixia-panel/releases)
+[![Lighthouse Score](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/pixia1234/pixia-panel/main/.github/lighthouse/performance.json)](https://github.com/pixia1234/pixia-panel/actions/workflows/lighthouse-ci.yml)
 [![Go Report Card](https://goreportcard.com/badge/github.com/pixia1234/pixia-panel)](https://goreportcard.com/report/github.com/pixia1234/pixia-panel)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
 
