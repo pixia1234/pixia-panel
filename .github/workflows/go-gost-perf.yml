@@ -29,32 +29,46 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: "1.25.7"
+          go-version-file: go-gost/go.mod
+          cache: true
+          cache-dependency-path: go-gost/go.sum
 
       - name: Install dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y iperf3 jq openssl
 
-      - name: Install gost binary
+      - name: Build project gost binary
         run: |
           set -euo pipefail
-          export GOBIN="$HOME/go/bin"
-          mkdir -p "$GOBIN"
-          go install github.com/go-gost/gost/cmd/gost@v0.0.0-20251122144702-340ba32ef0be
-          "$HOME/go/bin/gost" -V
+          cd go-gost
+          go build -trimpath -ldflags "-s -w" -o "$RUNNER_TEMP/gost-under-test" .
+          "$RUNNER_TEMP/gost-under-test" -V
+          sha256sum "$RUNNER_TEMP/gost-under-test" | tee "$RUNNER_TEMP/gost-under-test.sha256"
 
       - name: Run forward and tunnel benchmarks
         shell: bash
         run: |
           set -euo pipefail
 
-          BIN="$HOME/go/bin/gost"
+          BIN="$RUNNER_TEMP/gost-under-test"
           OUT_DIR="perf-artifacts"
           mkdir -p "$OUT_DIR"
 
+          cp "$RUNNER_TEMP/gost-under-test.sha256" "$OUT_DIR/gost-under-test.sha256"
+
           RESULTS_CSV="$OUT_DIR/results.csv"
           echo "scenario,transport,bps,loss,error" > "$RESULTS_CSV"
+
+          cat > config.json <<'JSON'
+          {
+            "addr": "http://127.0.0.1:65535",
+            "secret": "perf-ci-secret",
+            "http": 0,
+            "tls": 0,
+            "socks": 0
+          }
+          JSON
 
           openssl req -x509 -newkey rsa:2048 -sha256 -days 1 -nodes \
             -keyout "$OUT_DIR/key.pem" -out "$OUT_DIR/cert.pem" \
@@ -96,7 +110,7 @@ jobs:
             local entry_port="23000"
             local json_file="$OUT_DIR/port-forward-tcp.json"
 
-            "$BIN" -L "tcp://127.0.0.1:${entry_port}/127.0.0.1:5201" >"$OUT_DIR/gost-port-forward.log" 2>&1 &
+            "$BIN" -L "tcp://127.0.0.1:${entry_port}/127.0.0.1:5201?enableStats=true" >"$OUT_DIR/gost-port-forward.log" 2>&1 &
             local gost_pid=$!
             sleep 2
 
@@ -121,7 +135,7 @@ jobs:
             local server_pid=$!
             sleep 2
 
-            "$BIN" -L "tcp://127.0.0.1:${entry_port}/127.0.0.1:5201" -F "relay+${proto}://127.0.0.1:${relay_port}${client_query}" >"$client_log" 2>&1 &
+            "$BIN" -L "tcp://127.0.0.1:${entry_port}/127.0.0.1:5201?enableStats=true" -F "relay+${proto}://127.0.0.1:${relay_port}${client_query}" >"$client_log" 2>&1 &
             local client_pid=$!
             sleep 2
 
@@ -137,15 +151,18 @@ jobs:
 
           EXIT_CODE=0
           run_port_forward_tcp || EXIT_CODE=1
-          run_tunnel_case "tcp" 24001 23001 || EXIT_CODE=1
-          run_tunnel_case "mtcp" 24002 23002 || EXIT_CODE=1
-          run_tunnel_case "tls" 24003 23003 "?secure=false" "?certFile=${OUT_DIR}/cert.pem&keyFile=${OUT_DIR}/key.pem" || EXIT_CODE=1
-          run_tunnel_case "wss" 24004 23004 "?secure=false" "?certFile=${OUT_DIR}/cert.pem&keyFile=${OUT_DIR}/key.pem" || EXIT_CODE=1
+          run_tunnel_case "tcp" 24001 23001 "?enableStats=true" "?enableStats=true" || EXIT_CODE=1
+          run_tunnel_case "mtcp" 24002 23002 "?enableStats=true" "?enableStats=true" || EXIT_CODE=1
+          run_tunnel_case "tls" 24003 23003 "?secure=false&enableStats=true" "?certFile=${OUT_DIR}/cert.pem&keyFile=${OUT_DIR}/key.pem&enableStats=true" || EXIT_CODE=1
+          run_tunnel_case "wss" 24004 23004 "?secure=false&enableStats=true" "?certFile=${OUT_DIR}/cert.pem&keyFile=${OUT_DIR}/key.pem&enableStats=true" || EXIT_CODE=1
 
           cleanup_pid "$TARGET_PID"
+          rm -f config.json
 
           {
-            echo "## go-gost forward/tunnel perf"
+            echo "## go-gost forward/tunnel perf (project binary)"
+            echo
+            echo "- Binary SHA256: $(cat "$OUT_DIR/gost-under-test.sha256")"
             echo
             echo "| Scenario | Transport | Throughput (bps) | Loss (%) | Error |"
             echo "|---|---:|---:|---:|---|"
