@@ -15,17 +15,6 @@
 
 基于Gost + Go + SQLite 的转发面板。
 
-## 分支修改流程（dev → main）
-
-建议按以下流程协作，避免主分支被实验性提交污染：
-
-1. 所有日常开发与修复先提交到 `dev`；
-2. `dev` 分支通过 CI（`go vet/test/build` + 前端检查/构建）后再进入发布队列；
-3. 定期从 `dev` 发起 PR 合并到 `main`（建议按周或按里程碑）；
-4. 禁止直接向 `main` 推送代码，只通过 PR 合并。
-
-当前仓库工作流位置：`.github/workflows/ci-dev.yml`。
-
 ## 部署流程
 
 ### Docker Compose 部署
