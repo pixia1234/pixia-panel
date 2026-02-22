@@ -9,8 +9,12 @@ permissions:
   contents: write
   packages: write
 
+env:
+  BACKEND_IMAGE: pixia1234/pixia-panel-backend
+  FRONTEND_IMAGE: pixia1234/pixia-panel-frontend
+
 jobs:
-  publish:
+  build-gost-assets:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -24,8 +28,30 @@ jobs:
       - name: Build static gost binaries
         run: ./go-gost/build.sh ./go-gost/dist
 
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
+      - name: Upload gost artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: gost-dist
+          path: |
+            go-gost/dist/gost-amd64
+            go-gost/dist/gost-arm64
+          if-no-files-found: error
+
+  docker-build:
+    name: docker-build-${{ matrix.arch }}
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: amd64
+            runner: ubuntu-latest
+          - arch: arm64
+            runner: ubuntu-24.04-arm
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -36,47 +62,78 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Docker metadata (backend)
-        id: meta_backend
-        uses: docker/metadata-action@v5
-        with:
-          images: pixia1234/pixia-panel-backend
-          tags: |
-            type=semver,pattern={{version}}
-            type=raw,value=latest
-
-      - name: Build and push (backend)
+      - name: Build and push backend (${{ matrix.arch }})
         uses: docker/build-push-action@v5
         with:
           context: .
           file: Dockerfile
-          platforms: linux/amd64,linux/arm64
+          platforms: linux/${{ matrix.arch }}
           push: true
-          tags: ${{ steps.meta_backend.outputs.tags }}
-          labels: ${{ steps.meta_backend.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
-      - name: Docker metadata (frontend)
-        id: meta_frontend
-        uses: docker/metadata-action@v5
-        with:
-          images: pixia1234/pixia-panel-frontend
           tags: |
-            type=semver,pattern={{version}}
-            type=raw,value=latest
+            ${{ env.BACKEND_IMAGE }}:${{ github.ref_name }}-${{ matrix.arch }}
+            ${{ env.BACKEND_IMAGE }}:latest-${{ matrix.arch }}
+          cache-from: type=gha,scope=backend-${{ matrix.arch }}
+          cache-to: type=gha,mode=max,scope=backend-${{ matrix.arch }}
 
-      - name: Build and push (frontend)
+      - name: Build and push frontend (${{ matrix.arch }})
         uses: docker/build-push-action@v5
         with:
           context: ./vite-frontend
           file: ./vite-frontend/Dockerfile
-          platforms: linux/amd64,linux/arm64
+          platforms: linux/${{ matrix.arch }}
           push: true
-          tags: ${{ steps.meta_frontend.outputs.tags }}
-          labels: ${{ steps.meta_frontend.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          tags: |
+            ${{ env.FRONTEND_IMAGE }}:${{ github.ref_name }}-${{ matrix.arch }}
+            ${{ env.FRONTEND_IMAGE }}:latest-${{ matrix.arch }}
+          cache-from: type=gha,scope=frontend-${{ matrix.arch }}
+          cache-to: type=gha,mode=max,scope=frontend-${{ matrix.arch }}
+
+  docker-manifest:
+    runs-on: ubuntu-latest
+    needs: docker-build
+    steps:
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Create backend multi-arch manifest
+        run: |
+          docker buildx imagetools create \
+            -t ${BACKEND_IMAGE}:${GITHUB_REF_NAME} \
+            -t ${BACKEND_IMAGE}:latest \
+            ${BACKEND_IMAGE}:${GITHUB_REF_NAME}-amd64 \
+            ${BACKEND_IMAGE}:${GITHUB_REF_NAME}-arm64
+
+      - name: Create frontend multi-arch manifest
+        run: |
+          docker buildx imagetools create \
+            -t ${FRONTEND_IMAGE}:${GITHUB_REF_NAME} \
+            -t ${FRONTEND_IMAGE}:latest \
+            ${FRONTEND_IMAGE}:${GITHUB_REF_NAME}-amd64 \
+            ${FRONTEND_IMAGE}:${GITHUB_REF_NAME}-arm64
+
+  publish-release-assets:
+    runs-on: ubuntu-latest
+    needs:
+      - build-gost-assets
+      - docker-manifest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download gost artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: gost-dist
+          path: go-gost/dist
+
+      - name: Ensure executable bits
+        run: chmod +x go-gost/dist/gost-amd64 go-gost/dist/gost-arm64
 
       - name: Publish release assets
         uses: softprops/action-gh-release@v2
