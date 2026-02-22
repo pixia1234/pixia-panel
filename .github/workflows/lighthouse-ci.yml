@@ -13,6 +13,9 @@ on:
 permissions:
   contents: write
 
+env:
+  LIGHTHOUSE_URL: https://pixia-panel.pixia.eu.org/
+
 jobs:
   lighthouse:
     runs-on: ubuntu-latest
@@ -30,7 +33,7 @@ jobs:
         uses: treosh/lighthouse-ci-action@v11
         with:
           urls: |
-            https://pixia-panel.pixia.eu.org/
+            ${{ env.LIGHTHOUSE_URL }}
           uploadArtifacts: true
           temporaryPublicStorage: true
           runs: 3
@@ -39,13 +42,9 @@ jobs:
         run: |
           set -euo pipefail
 
-          MANIFEST_PATH='${{ steps.lhci.outputs.manifest }}'
-          if [[ ! -f "$MANIFEST_PATH" ]]; then
-            echo "manifest not found: $MANIFEST_PATH"
-            exit 1
-          fi
+          MANIFEST_JSON='${{ steps.lhci.outputs.manifest }}'
 
-          score=$(jq -r '[.[] | select(.isRepresentativeRun == true) | .summary.performance] | if length > 0 then add/length else ([.[].summary.performance] | add/length) end' "$MANIFEST_PATH")
+          score=$(jq -r '[.[] | select(.isRepresentativeRun == true) | .summary.performance] | if length > 0 then add/length else ([.[].summary.performance] | add/length) end' <<<"$MANIFEST_JSON")
           score_pct=$(awk -v s="$score" 'BEGIN { printf "%.0f", s * 100 }')
 
           if (( score_pct >= 90 )); then
