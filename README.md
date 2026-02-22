@@ -6,7 +6,6 @@
 [![React](https://img.shields.io/badge/React-18.3+-61DAFB.svg)](https://react.dev/)
 [![Docker Publish](https://github.com/pixia1234/pixia-panel/actions/workflows/docker-publish.yml/badge.svg)](https://github.com/pixia1234/pixia-panel/actions/workflows/docker-publish.yml)
 [![Dev CI](https://github.com/pixia1234/pixia-panel/actions/workflows/ci-dev.yml/badge.svg?branch=dev)](https://github.com/pixia1234/pixia-panel/actions/workflows/ci-dev.yml)
-[![Lighthouse Score](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/pixia1234/pixia-panel/main/.github/lighthouse/performance.json)](https://github.com/pixia1234/pixia-panel/actions/workflows/lighthouse-ci.yml)
 [![Go Report Card](https://goreportcard.com/badge/github.com/pixia1234/pixia-panel)](https://goreportcard.com/report/github.com/pixia1234/pixia-panel)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
 
