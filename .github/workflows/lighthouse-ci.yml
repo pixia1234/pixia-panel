@@ -1,0 +1,85 @@
+name: Lighthouse CI
+
+on:
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - .github/lighthouse/performance.json
+  schedule:
+    - cron: "20 2 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  lighthouse:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install jq
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y jq
+
+      - name: Run Lighthouse CI
+        id: lhci
+        uses: treosh/lighthouse-ci-action@v11
+        with:
+          urls: |
+            https://pixia-panel.pixia.eu.org/
+          uploadArtifacts: true
+          temporaryPublicStorage: true
+          runs: 3
+
+      - name: Build badge payload
+        run: |
+          set -euo pipefail
+
+          MANIFEST_PATH='${{ steps.lhci.outputs.manifest }}'
+          if [[ ! -f "$MANIFEST_PATH" ]]; then
+            echo "manifest not found: $MANIFEST_PATH"
+            exit 1
+          fi
+
+          score=$(jq -r '[.[] | select(.isRepresentativeRun == true) | .summary.performance] | if length > 0 then add/length else ([.[].summary.performance] | add/length) end' "$MANIFEST_PATH")
+          score_pct=$(awk -v s="$score" 'BEGIN { printf "%.0f", s * 100 }')
+
+          if (( score_pct >= 90 )); then
+            color="brightgreen"
+          elif (( score_pct >= 75 )); then
+            color="yellow"
+          elif (( score_pct >= 50 )); then
+            color="orange"
+          else
+            color="red"
+          fi
+
+          mkdir -p .github/lighthouse
+          cat > .github/lighthouse/performance.json <<EOF
+          {
+            "schemaVersion": 1,
+            "label": "Lighthouse",
+            "message": "${score_pct}/100",
+            "color": "${color}"
+          }
+          EOF
+
+      - name: Commit badge update
+        run: |
+          set -euo pipefail
+
+          if git diff --quiet -- .github/lighthouse/performance.json; then
+            echo "No badge changes"
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add .github/lighthouse/performance.json
+          git commit -m "ci(lighthouse): update performance badge [skip ci]"
+          git push
