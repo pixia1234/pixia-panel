@@ -245,8 +245,10 @@ export default function AdminLayout({
           <div className={`flex ${isMobile ? 'min-h-screen' : 'h-screen'} bg-gray-100 dark:bg-black`}>
       {/* 移动端遮罩层 */}
       {isMobile && mobileMenuVisible && (
-        <div 
-          className="fixed inset-0 backdrop-blur-sm bg-white/50 dark:bg-black/30 z-40"
+        <button
+          type="button"
+          aria-label="关闭移动端菜单"
+          className="fixed inset-0 backdrop-blur-sm bg-white/50 dark:bg-black/30 z-40 appearance-none border-0 p-0 m-0"
           onClick={hideMobileMenu}
         />
       )}

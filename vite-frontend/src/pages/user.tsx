@@ -1240,7 +1240,7 @@ export default function UserPage() {
               </div>
               <div className="flex-1">
                 <p className="text-foreground">
-                  确定要删除用户 <span className="font-semibold text-danger">"{userToDelete?.user}"</span> 吗？
+                  确定要删除用户 <span className="font-semibold text-danger">“{userToDelete?.user}”</span> 吗？
                 </p>
                 <p className="text-small text-default-500 mt-1">
                   此操作不可撤销，用户的所有数据将被永久删除。
@@ -1285,7 +1285,7 @@ export default function UserPage() {
               </div>
               <div className="flex-1">
                 <p className="text-foreground">
-                  确定要删除用户 <span className="font-semibold">{currentUser?.user}</span> 对隧道 <span className="font-semibold text-danger">"{tunnelToDelete?.tunnelName}"</span> 的权限吗？
+                  确定要删除用户 <span className="font-semibold">{currentUser?.user}</span> 对隧道 <span className="font-semibold text-danger">“{tunnelToDelete?.tunnelName}”</span> 的权限吗？
                 </p>
                 <p className="text-small text-default-500 mt-1">
                   删除后该用户将无法使用此隧道创建转发，此操作不可撤销。
@@ -1332,7 +1332,7 @@ export default function UserPage() {
               </div>
               <div className="flex-1">
                 <p className="text-foreground">
-                  确定要重置用户 <span className="font-semibold text-warning">"{userToReset?.user}"</span> 的流量吗？
+                  确定要重置用户 <span className="font-semibold text-warning">“{userToReset?.user}”</span> 的流量吗？
                 </p>
                 <p className="text-small text-default-500 mt-1">
                   该操作只会重置账号流量不会重置隧道权限流量，重置后该用户的上下行流量将归零，此操作不可撤销。
@@ -1401,7 +1401,7 @@ export default function UserPage() {
               </div>
               <div className="flex-1">
                 <p className="text-foreground">
-                  确定要重置用户 <span className="font-semibold">{currentUser?.user}</span> 对隧道 <span className="font-semibold text-warning">"{tunnelToReset?.tunnelName}"</span> 的流量吗？
+                  确定要重置用户 <span className="font-semibold">{currentUser?.user}</span> 对隧道 <span className="font-semibold text-warning">“{tunnelToReset?.tunnelName}”</span> 的流量吗？
                 </p>
                 <p className="text-small text-default-500 mt-1">
                   该操作只会重置隧道权限流量不会重置账号流量，重置后该隧道权限的上下行流量将归零，此操作不可撤销。

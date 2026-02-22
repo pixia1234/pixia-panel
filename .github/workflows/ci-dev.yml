@@ -58,13 +58,7 @@ jobs:
         run: npm install --legacy-peer-deps
 
       - name: Lint
-        id: lint
         run: npm run lint:check
-        continue-on-error: true
-
-      - name: Lint summary
-        if: ${{ steps.lint.outcome == 'failure' }}
-        run: echo "::warning::Frontend lint has existing baseline issues; currently non-blocking in dev CI."
 
       - name: Test (if present)
         run: npm run test --if-present
