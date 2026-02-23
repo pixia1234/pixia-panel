@@ -12,11 +12,15 @@ updates:
       prefix: "deps(go)"
     labels:
       - "dependencies"
-    groups:
-      go-minor-patch:
+    ignore:
+      - dependency-name: "*"
         update-types:
-          - "minor"
-          - "patch"
+          - "version-update:semver-minor"
+          - "version-update:semver-patch"
+    groups:
+      go-major:
+        update-types:
+          - "major"
 
   - package-ecosystem: "npm"
     directory: "/vite-frontend"
@@ -30,11 +34,15 @@ updates:
       prefix: "deps(npm)"
     labels:
       - "dependencies"
-    groups:
-      npm-minor-patch:
+    ignore:
+      - dependency-name: "*"
         update-types:
-          - "minor"
-          - "patch"
+          - "version-update:semver-minor"
+          - "version-update:semver-patch"
+    groups:
+      npm-major:
+        update-types:
+          - "major"
 
   - package-ecosystem: "github-actions"
     directory: "/"
@@ -48,8 +56,12 @@ updates:
       prefix: "deps(ci)"
     labels:
       - "dependencies"
-    groups:
-      github-actions-minor-patch:
+    ignore:
+      - dependency-name: "*"
         update-types:
-          - "minor"
-          - "patch"
+          - "version-update:semver-minor"
+          - "version-update:semver-patch"
+    groups:
+      github-actions-major:
+        update-types:
+          - "major"
