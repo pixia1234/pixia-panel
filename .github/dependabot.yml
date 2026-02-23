@@ -19,8 +19,13 @@ updates:
           - "version-update:semver-patch"
     groups:
       go-major:
+        applies-to: version-updates
         update-types:
           - "major"
+      go-security:
+        applies-to: security-updates
+        patterns:
+          - "*"
 
   - package-ecosystem: "npm"
     directory: "/vite-frontend"
@@ -41,8 +46,13 @@ updates:
           - "version-update:semver-patch"
     groups:
       npm-major:
+        applies-to: version-updates
         update-types:
           - "major"
+      npm-security:
+        applies-to: security-updates
+        patterns:
+          - "*"
 
   - package-ecosystem: "github-actions"
     directory: "/"
@@ -63,5 +73,10 @@ updates:
           - "version-update:semver-patch"
     groups:
       github-actions-major:
+        applies-to: version-updates
         update-types:
           - "major"
+      github-actions-security:
+        applies-to: security-updates
+        patterns:
+          - "*"
