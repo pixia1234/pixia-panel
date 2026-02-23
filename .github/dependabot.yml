@@ -2,7 +2,7 @@ version: 2
 updates:
   - package-ecosystem: "gomod"
     directory: "/"
-    target-branch: "dev"
+    target-branch: "main"
     schedule:
       interval: "weekly"
       day: "monday"
@@ -26,7 +26,7 @@ updates:
 
   - package-ecosystem: "npm"
     directory: "/vite-frontend"
-    target-branch: "dev"
+    target-branch: "main"
     schedule:
       interval: "weekly"
       day: "monday"
@@ -50,7 +50,7 @@ updates:
 
   - package-ecosystem: "github-actions"
     directory: "/"
-    target-branch: "dev"
+    target-branch: "main"
     schedule:
       interval: "weekly"
       day: "monday"
