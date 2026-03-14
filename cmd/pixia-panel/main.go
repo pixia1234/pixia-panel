@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strconv"
 	"time"
 
 	_ "modernc.org/sqlite"
@@ -28,6 +29,11 @@ func main() {
 	wsPath := getenvDefault("PIXIA_WS_PATH", "/system-info")
 	interval := getenvDurationDefault("PIXIA_OUTBOX_INTERVAL", 500*time.Millisecond)
 	retryDelay := getenvDurationDefault("PIXIA_OUTBOX_RETRY_DELAY", 5*time.Second)
+	maxRetryDelay := getenvDurationDefault("PIXIA_OUTBOX_MAX_RETRY_DELAY", 5*time.Minute)
+	maxRetries := getenvInt64Default("PIXIA_OUTBOX_MAX_RETRIES", 24)
+	batchSize := getenvIntDefault("PIXIA_OUTBOX_BATCH_SIZE", 20)
+	maxProcessingAge := getenvDurationDefault("PIXIA_OUTBOX_MAX_PROCESSING_AGE", 2*time.Minute)
+	staleCheckInterval := getenvDurationDefault("PIXIA_OUTBOX_STALE_CHECK_INTERVAL", 30*time.Second)
 	jwtSecret := []byte(getenvDefault("PIXIA_JWT_SECRET", "pixia-secret"))
 	jwtTTL := getenvDurationDefault("PIXIA_JWT_TTL", 24*time.Hour)
 
@@ -58,7 +64,15 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	worker := outbox.NewWorker(store, hub, interval, retryDelay)
+	worker := outbox.NewWorker(store, hub, outbox.WorkerOptions{
+		Interval:           interval,
+		RetryDelay:         retryDelay,
+		MaxRetryDelay:      maxRetryDelay,
+		MaxRetries:         maxRetries,
+		BatchSize:          batchSize,
+		MaxProcessingAge:   maxProcessingAge,
+		StaleCheckInterval: staleCheckInterval,
+	})
 	go worker.Run(ctx)
 
 	scheduler := tasks.New(store, server)
@@ -85,6 +99,24 @@ func getenvDurationDefault(key string, def time.Duration) time.Duration {
 	if v := os.Getenv(key); v != "" {
 		if d, err := time.ParseDuration(v); err == nil {
 			return d
+		}
+	}
+	return def
+}
+
+func getenvIntDefault(key string, def int) int {
+	if v := os.Getenv(key); v != "" {
+		if n, err := strconv.Atoi(v); err == nil {
+			return n
+		}
+	}
+	return def
+}
+
+func getenvInt64Default(key string, def int64) int64 {
+	if v := os.Getenv(key); v != "" {
+		if n, err := strconv.ParseInt(v, 10, 64); err == nil {
+			return n
 		}
 	}
 	return def

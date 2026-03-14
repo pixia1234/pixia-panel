@@ -77,6 +77,18 @@ curl -L https://raw.githubusercontent.com/pixia1234/pixia-panel/refs/heads/main/
 
 或在面板可以直接获取一键安装脚本 运行即可。
 
+## 关键环境变量（命令队列）
+
+可在面板容器中按需覆盖以下变量，优化节点同步稳定性：
+
+- `PIXIA_OUTBOX_INTERVAL`：队列轮询间隔，默认 `500ms`
+- `PIXIA_OUTBOX_BATCH_SIZE`：单次批量处理条数，默认 `20`
+- `PIXIA_OUTBOX_RETRY_DELAY`：首次重试延迟，默认 `5s`
+- `PIXIA_OUTBOX_MAX_RETRY_DELAY`：最大重试延迟，默认 `5m`
+- `PIXIA_OUTBOX_MAX_RETRIES`：最大重试次数，默认 `24`（`0` 表示不设上限）
+- `PIXIA_OUTBOX_MAX_PROCESSING_AGE`：`processing` 状态超时回收阈值，默认 `2m`
+- `PIXIA_OUTBOX_STALE_CHECK_INTERVAL`：回收检查间隔，默认 `30s`
+
 ## 默认管理员账号
 
 账号: admin_user  

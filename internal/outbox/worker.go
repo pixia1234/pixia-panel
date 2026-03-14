@@ -12,14 +12,62 @@ import (
 )
 
 type Worker struct {
-	store    *store.Store
-	hub      *gost.Hub
-	interval time.Duration
-	delay    time.Duration
+	store              *store.Store
+	hub                *gost.Hub
+	interval           time.Duration
+	delay              time.Duration
+	maxDelay           time.Duration
+	maxRetries         int64
+	batchSize          int
+	maxProcessingAge   time.Duration
+	staleCheckInterval time.Duration
+	lastStaleCheck     time.Time
 }
 
-func NewWorker(store *store.Store, hub *gost.Hub, interval, retryDelay time.Duration) *Worker {
-	return &Worker{store: store, hub: hub, interval: interval, delay: retryDelay}
+type WorkerOptions struct {
+	Interval           time.Duration
+	RetryDelay         time.Duration
+	MaxRetryDelay      time.Duration
+	MaxRetries         int64
+	BatchSize          int
+	MaxProcessingAge   time.Duration
+	StaleCheckInterval time.Duration
+}
+
+func NewWorker(store *store.Store, hub *gost.Hub, opts WorkerOptions) *Worker {
+	if opts.Interval <= 0 {
+		opts.Interval = 500 * time.Millisecond
+	}
+	if opts.RetryDelay <= 0 {
+		opts.RetryDelay = 5 * time.Second
+	}
+	if opts.MaxRetryDelay <= 0 {
+		opts.MaxRetryDelay = 5 * time.Minute
+	}
+	if opts.MaxRetryDelay < opts.RetryDelay {
+		opts.MaxRetryDelay = opts.RetryDelay
+	}
+	if opts.BatchSize <= 0 {
+		opts.BatchSize = 20
+	}
+	if opts.MaxProcessingAge <= 0 {
+		opts.MaxProcessingAge = 2 * time.Minute
+	}
+	if opts.StaleCheckInterval <= 0 {
+		opts.StaleCheckInterval = 30 * time.Second
+	}
+
+	return &Worker{
+		store:              store,
+		hub:                hub,
+		interval:           opts.Interval,
+		delay:              opts.RetryDelay,
+		maxDelay:           opts.MaxRetryDelay,
+		maxRetries:         opts.MaxRetries,
+		batchSize:          opts.BatchSize,
+		maxProcessingAge:   opts.MaxProcessingAge,
+		staleCheckInterval: opts.StaleCheckInterval,
+	}
 }
 
 type GostMessage struct {
@@ -45,7 +93,9 @@ func (w *Worker) Run(ctx context.Context) {
 }
 
 func (w *Worker) processOnce(ctx context.Context) {
-	item, err := w.store.ClaimNextOutbox(ctx)
+	w.requeueStaleProcessing(ctx)
+
+	items, err := w.store.ClaimNextOutboxBatch(ctx, w.batchSize)
 	if err != nil {
 		if err == store.ErrNotFound {
 			return
@@ -54,17 +104,39 @@ func (w *Worker) processOnce(ctx context.Context) {
 		return
 	}
 
+	for i := range items {
+		w.processItem(ctx, &items[i])
+	}
+}
+
+func (w *Worker) processItem(ctx context.Context, item *store.OutboxItem) {
+	if item == nil {
+		return
+	}
+
 	var msg GostMessage
 	if err := json.Unmarshal(item.Payload, &msg); err != nil {
 		log.Printf("outbox payload invalid: %v", err)
-		_ = w.store.MarkOutboxFailed(ctx, item.ID, w.delay)
+		_ = w.store.MarkOutboxDead(ctx, item.ID, false)
+		return
+	}
+
+	exists, err := w.store.NodeExists(ctx, msg.NodeID)
+	if err != nil {
+		log.Printf("outbox node lookup failed: node_id=%d err=%v", msg.NodeID, err)
+		w.markFailed(ctx, item)
+		return
+	}
+	if !exists {
+		log.Printf("outbox node missing, mark dead: node_id=%d action=%s", msg.NodeID, msg.Action)
+		_ = w.store.MarkOutboxDead(ctx, item.ID, false)
 		return
 	}
 
 	resp, err := w.hub.SendAndWait(ctx, msg.NodeID, msg.Action, msg.Data, commandResponseTimeout)
 	if err != nil {
 		log.Printf("gost send failed: %v", err)
-		_ = w.store.MarkOutboxFailed(ctx, item.ID, w.delay)
+		w.markFailed(ctx, item)
 		return
 	}
 
@@ -74,11 +146,65 @@ func (w *Worker) processOnce(ctx context.Context) {
 			return
 		}
 		log.Printf("gost command failed: action=%s node_id=%d message=%s", msg.Action, msg.NodeID, resp.Message)
-		_ = w.store.MarkOutboxFailed(ctx, item.ID, w.delay)
+		w.markFailed(ctx, item)
 		return
 	}
 
 	_ = w.store.MarkOutboxSuccess(ctx, item.ID)
+}
+
+func (w *Worker) markFailed(ctx context.Context, item *store.OutboxItem) {
+	if item == nil {
+		return
+	}
+
+	if w.maxRetries > 0 && item.RetryCount+1 >= w.maxRetries {
+		_ = w.store.MarkOutboxDead(ctx, item.ID, true)
+		return
+	}
+
+	delay := w.retryDelay(item.RetryCount)
+	_ = w.store.MarkOutboxFailed(ctx, item.ID, delay)
+}
+
+func (w *Worker) retryDelay(retryCount int64) time.Duration {
+	if retryCount <= 0 {
+		return w.delay
+	}
+
+	d := w.delay
+	for i := int64(0); i < retryCount; i++ {
+		if d >= w.maxDelay {
+			return w.maxDelay
+		}
+		if d > w.maxDelay/2 {
+			return w.maxDelay
+		}
+		d *= 2
+	}
+	if d > w.maxDelay {
+		return w.maxDelay
+	}
+	return d
+}
+
+func (w *Worker) requeueStaleProcessing(ctx context.Context) {
+	if w.maxProcessingAge <= 0 {
+		return
+	}
+	if w.staleCheckInterval > 0 && !w.lastStaleCheck.IsZero() && time.Since(w.lastStaleCheck) < w.staleCheckInterval {
+		return
+	}
+
+	affected, err := w.store.RequeueStaleOutboxProcessing(ctx, w.maxProcessingAge)
+	w.lastStaleCheck = time.Now()
+	if err != nil {
+		log.Printf("outbox stale requeue error: %v", err)
+		return
+	}
+	if affected > 0 {
+		log.Printf("outbox stale processing requeued: %d", affected)
+	}
 }
 
 func shouldAcknowledgeAsSuccess(action, message string) bool {

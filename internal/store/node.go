@@ -82,6 +82,18 @@ func (s *Store) DeleteNode(ctx context.Context, id int64) error {
 	return err
 }
 
+func (s *Store) NodeExists(ctx context.Context, id int64) (bool, error) {
+	row := s.db.QueryRowContext(ctx, `SELECT 1 FROM node WHERE id = ? LIMIT 1`, id)
+	var one int64
+	if err := row.Scan(&one); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return false, nil
+		}
+		return false, err
+	}
+	return true, nil
+}
+
 func scanNode(scanner interface{ Scan(dest ...any) error }) (*Node, error) {
 	var node Node
 	var ip sql.NullString

@@ -165,6 +165,7 @@ func (s *Server) handleNodeDelete(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusInternalServerError, Err("删除失败"))
 		return
 	}
+	_, _ = s.store.MarkOutboxDeadByNodeID(r.Context(), req.ID)
 	writeJSON(w, http.StatusOK, OK("节点删除成功"))
 }
 
