@@ -13,6 +13,18 @@ func (s *Store) GetNodeByID(ctx context.Context, id int64) (*Node, error) {
 	return scanNode(row)
 }
 
+func (s *Store) NodeExists(ctx context.Context, id int64) (bool, error) {
+	row := s.db.QueryRowContext(ctx, `SELECT 1 FROM node WHERE id = ? LIMIT 1`, id)
+	var exists int
+	if err := row.Scan(&exists); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return false, nil
+		}
+		return false, err
+	}
+	return true, nil
+}
+
 func (s *Store) GetNodeBySecret(ctx context.Context, secret string) (*Node, error) {
 	secret = strings.TrimSpace(secret)
 	row := s.db.QueryRowContext(ctx, `SELECT id, name, secret, ip, server_ip, port_sta, port_end, version, http, tls, socks, created_time, updated_time, status FROM node WHERE lower(secret) = lower(?)`, secret)
@@ -82,17 +94,6 @@ func (s *Store) DeleteNode(ctx context.Context, id int64) error {
 	return err
 }
 
-func (s *Store) NodeExists(ctx context.Context, id int64) (bool, error) {
-	row := s.db.QueryRowContext(ctx, `SELECT 1 FROM node WHERE id = ? LIMIT 1`, id)
-	var one int64
-	if err := row.Scan(&one); err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return false, nil
-		}
-		return false, err
-	}
-	return true, nil
-}
 
 func scanNode(scanner interface{ Scan(dest ...any) error }) (*Node, error) {
 	var node Node

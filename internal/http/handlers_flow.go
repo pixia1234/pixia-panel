@@ -3,6 +3,7 @@ package httpapi
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"io"
 	"net/http"
 	"strconv"
@@ -12,6 +13,7 @@ import (
 	"pixia-panel/internal/crypto"
 	"pixia-panel/internal/flow"
 	"pixia-panel/internal/gost"
+	storepkg "pixia-panel/internal/store"
 )
 
 type flowDTO struct {
@@ -160,22 +162,18 @@ func (s *Server) cleanOrphanedServices(r *http.Request, nodeID int64, services [
 		if svc.Name == "" || svc.Name == "web_api" {
 			continue
 		}
-		parts := strings.Split(svc.Name, "_")
-		if len(parts) < 4 {
+		forwardID, base, typ, ok := parseManagedConfigName(svc.Name)
+		if !ok {
 			continue
 		}
-		forwardID, _ := strconv.ParseInt(parts[0], 10, 64)
-		base := strings.Join(parts[:3], "_")
-		typ := parts[3]
-
-		if _, err := s.store.GetForwardByID(r.Context(), forwardID); err == nil {
+		if !s.shouldDeleteOrphanedForwardConfig(r.Context(), forwardID, base) {
 			continue
 		}
 
-		if typ == "tcp" {
+		switch typ {
+		case "tcp":
 			_ = s.enqueueGost(r, nodeID, "DeleteService", gost.DeleteServiceData(base))
-		}
-		if typ == "tls" {
+		case "tls":
 			_ = s.enqueueGost(r, nodeID, "DeleteService", gost.DeleteRemoteServiceData(base))
 		}
 	}
@@ -186,17 +184,11 @@ func (s *Server) cleanOrphanedChains(r *http.Request, nodeID int64, chains []con
 		if chain.Name == "" {
 			continue
 		}
-		parts := strings.Split(chain.Name, "_")
-		if len(parts) < 4 {
+		forwardID, base, typ, ok := parseManagedConfigName(chain.Name)
+		if !ok || typ != "chains" {
 			continue
 		}
-		forwardID, _ := strconv.ParseInt(parts[0], 10, 64)
-		base := strings.Join(parts[:3], "_")
-		typ := parts[3]
-		if typ != "chains" {
-			continue
-		}
-		if _, err := s.store.GetForwardByID(r.Context(), forwardID); err == nil {
+		if !s.shouldDeleteOrphanedForwardConfig(r.Context(), forwardID, base) {
 			continue
 		}
 		_ = s.enqueueGost(r, nodeID, "DeleteChains", gost.DeleteChainsData(base))
@@ -217,6 +209,27 @@ func (s *Server) cleanOrphanedLimiters(r *http.Request, nodeID int64, limiters [
 		}
 		_ = s.enqueueGost(r, nodeID, "DeleteLimiters", gost.DeleteLimitersData(id))
 	}
+}
+
+func parseManagedConfigName(name string) (forwardID int64, base string, typ string, ok bool) {
+	parts := strings.Split(name, "_")
+	if len(parts) < 4 {
+		return 0, "", "", false
+	}
+	parsedID, err := strconv.ParseInt(parts[0], 10, 64)
+	if err != nil || parsedID <= 0 {
+		return 0, "", "", false
+	}
+	return parsedID, strings.Join(parts[:3], "_"), parts[3], true
+}
+
+func (s *Server) shouldDeleteOrphanedForwardConfig(ctx context.Context, forwardID int64, currentBase string) bool {
+	fw, err := s.store.GetForwardByID(ctx, forwardID)
+	if err != nil {
+		return errors.Is(err, storepkg.ErrNotFound)
+	}
+	expectedBase := buildServiceName(fw.ID, fw.UserID, s.resolveUserTunnelIDCtx(ctx, fw.UserID, fw.TunnelID))
+	return expectedBase != currentBase
 }
 
 func (s *Server) checkAndPauseIfNeeded(r *http.Request, forwardID, userID, userTunnelID int64) {
